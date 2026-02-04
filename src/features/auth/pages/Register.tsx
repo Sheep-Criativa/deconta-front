@@ -1,30 +1,90 @@
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
 import { registerUser } from "../services/auth.service";
 
-async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+const zodMessageMap: Record<string, (issue: any) => string> = {
+  too_small: (issue) => {
+    if (issue.path[0] === "name") {
+      return "O nome deve ter pelo menos 2 caracteres";
+    }
 
-  const formData = new FormData(event.currentTarget);
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const passwordHash = formData.get("passwordHash") as string;
+    if (issue.path[0] === "passwordHash") {
+      return "A senha deve ter no mínimo 6 caracteres";
+    }
 
-  try {
-    const data = { name, email, passwordHash };
-    const response = await registerUser(data);
-    console.log("User registered successfully:", response);
-  } catch (error) {
-    console.error("Error registering user:", error);
-  }
-}
+    return "Campo muito curto";
+  },
+
+  invalid_format: (issue) => {
+    if (issue.format === "email") {
+      return "Digite um e-mail válido";
+    }
+
+    if (issue.path[0] === "passwordHash") {
+      return "A senha não atende aos critérios de segurança";
+    }
+
+    return "Formato inválido";
+  },
+};
 
 export default function Register() {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrors({});
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const passwordHash = formData.get("passwordHash") as string;
+
+    try {
+      const data = { name, email, passwordHash };
+      await registerUser(data);
+      console.log("User registered successfully");
+    } catch (error: unknown) {
+      if (typeof error === "object" && error !== null && "response" in error) {
+        const err = error as {
+          response?: {
+            data?: {
+              issues?: {
+                path: string[];
+                message: string;
+              }[];
+            };
+          };
+        };
+
+        const issues = err.response?.data?.issues;
+
+        if (Array.isArray(issues)) {
+          const fieldErrors: Record<string, string> = {};
+
+          issues.forEach((issue) => {
+            const field = issue.path?.[0];
+            if (!field || fieldErrors[field]) return;
+
+            const customMessage =
+              zodMessageMap[issue.code]?.(issue) ?? "Campo inválido";
+
+            fieldErrors[field] = customMessage;
+          });
+
+          console.log("FIELD ERRORS", fieldErrors);
+          setErrors(fieldErrors);
+        }
+      }
+    }
+  }
+
   return (
     <div className="relative min-h-screen grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
-      
       {/* BACKGROUND IMAGE */}
       <img
         src="/images/ceu1.png"
@@ -35,25 +95,26 @@ export default function Register() {
       {/* LIGHT SPOTS */}
       <div className="pointer-events-none absolute inset-0">
         {/* Luz superior esquerda */}
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px]
+        <div
+          className="absolute -top-40 -left-40 w-[600px] h-[600px]
           bg-[radial-gradient(circle_at_center,rgba(255,255,255,1),transparent_60%)]
-          blur-[120px]" 
+          blur-[120px]"
         />
 
         {/* Luz superior direita para esquerda */}
-        <div className="absolute right-[-200px] w-[700px] h-[900px]
+        <div
+          className="absolute right-[-200px] w-[700px] h-[900px]
           bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.3),transparent_60%)]
-          blur-[140px]" 
+          blur-[140px]"
         />
-
       </div>
 
       {/* LEFT SIDE – IMAGE / BRAND */}
       <div className="hidden lg:flex items-center justify-center relative overflow-hidden">
         {/* BRAND LOGO */}
         <div className="absolute top-8 left-8 z-10">
-          <img 
-            src="/images/logoverdical.png" 
+          <img
+            src="/images/logoverdical.png"
             alt="DeConta Logo"
             className="w-1/5 h-auto block object-contain leading-none -mt-14 -ml-4"
           />
@@ -70,9 +131,7 @@ export default function Register() {
       {/* RIGHT SIDE – FORM */}
       <div className="flex items-center justify-center px-6 bg-sky-400 lg:bg-transparent">
         <Card className="max-w-[730px] bg-white rounded-4xl border-none shadow-2xl px-20 py-16">
-          
           <div className="flex flex-col w-auto">
-            
             {/* ICON */}
             <div className="mb-6">
               <img
@@ -88,8 +147,8 @@ export default function Register() {
             </h1>
 
             <p className="text-lg text-zinc-500 mb-6 leading-relaxed">
-              Acesse suas finanças a qualquer momento <br />
-              e mantenha tudo organizado em um só lugar.
+              Acesse suas finanças a qualquer momento <br />e mantenha tudo
+              organizado em um só lugar.
             </p>
 
             {/* FORM */}
@@ -102,6 +161,9 @@ export default function Register() {
                   className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900"
                   name="name"
                 />
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -113,6 +175,9 @@ export default function Register() {
                   className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900"
                   name="email"
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -124,6 +189,11 @@ export default function Register() {
                   className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900"
                   name="passwordHash"
                 />
+                {errors.passwordHash && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.passwordHash}
+                  </p>
+                )}
               </div>
 
               <Button
@@ -137,9 +207,7 @@ export default function Register() {
 
             {/* SOCIAL */}
             <div className="mt-8 text-center">
-              <p className="text-sm text-zinc-500 mb-4">
-                Ou continue com:
-              </p>
+              <p className="text-sm text-zinc-500 mb-4">Ou continue com:</p>
 
               <div className="flex justify-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-zinc-100" />
@@ -158,7 +226,6 @@ export default function Register() {
                 Entrar
               </a>
             </p>
-
           </div>
         </Card>
       </div>
