@@ -1,0 +1,20 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface BaseCardProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function BaseCard({ children, className }: BaseCardProps) {
+  return (
+    <div
+      className={cn(
+        "bg-white rounded-2xl p-6",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
