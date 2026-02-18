@@ -10,7 +10,7 @@ export function BaseCard({ children, className }: BaseCardProps) {
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl p-6",
+        "bg-white rounded-2xl p-6 shadow-md",
         className
       )}
     >

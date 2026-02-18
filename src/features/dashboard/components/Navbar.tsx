@@ -1,12 +1,26 @@
-import { Search, Bell, CircleAlert, ChevronDown } from "lucide-react";
+import { Search, Bell, CircleAlert, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function NavBar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
-  // Como o AuthProvider gerencia o loading globalmente agora, 
-  // aqui podemos assumir que se o componente renderizou, a auth já foi checada.
-  // Mas o user pode ser null se não estiver logado (hipoteticamente, mas ProtectedRoute previne isso)
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2)
+    : "U";
 
   return (
     <header className="w-full px-8 py-6 flex items-center justify-between">
@@ -41,14 +55,38 @@ export default function NavBar() {
         <Bell className="w-6 h-6 text-gray-400 cursor-pointer" />
         <CircleAlert className="w-6 h-6 text-gray-400 cursor-pointer" />
 
-        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm">
-          <div className="w-9 h-9 bg-gray-300 rounded-full" />
-          <div className="text-sm">
-            <p className="font-medium">{user?.name || "usuário"}</p>
-            <p className="text-xs text-gray-400">{user?.email || "email@exemplo.com"}</p>
-          </div>
-          <ChevronDown className="w-5 h-5 text-gray-400" />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+              <Avatar className="w-9 h-9">
+                <AvatarImage src="" />
+                <AvatarFallback className="bg-emerald-100 text-emerald-700 font-medium">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="text-sm text-left hidden sm:block">
+                <p className="font-medium text-zinc-900">{user?.name || "usuário"}</p>
+                <p className="text-xs text-zinc-500">{user?.email || "email@exemplo.com"}</p>
+              </div>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </DropdownMenuTrigger>
+          
+          <DropdownMenuContent align="end" className="w-56 bg-white">
+            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer hover:bg-gray-50">
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>Perfil</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 hover:bg-red-50" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sair</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
