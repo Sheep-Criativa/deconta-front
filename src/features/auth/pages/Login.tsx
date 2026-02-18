@@ -61,7 +61,7 @@ export default function Login() {
       const data = { email, passwordHash };
       await loginUser(data.email, data.passwordHash);
       console.log("User logged in successfully");
-      router.navigate("/");
+      router.navigate("/dashboard");
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as any;
