@@ -1,6 +1,13 @@
 import { Search, Bell, CircleAlert, ChevronDown } from "lucide-react";
+import { useDashboard } from "../hooks/useDashboard";
 
 export default function NavBar() {
+  const { data, loading } = useDashboard();
+
+  if (loading) {
+    return <div className="space-y-6">Carregando...</div>;
+  }
+
   return (
     <header className="w-full px-8 py-6 flex items-center justify-between">
       {/* Área esquerda */}
@@ -12,7 +19,9 @@ export default function NavBar() {
           className="w-14 ml-1"
         />
         <div className="ml-6">
-          <h1 className="text-2xl font-semibold">Olá, Nathan!</h1>
+          <h1 className="text-2xl font-semibold">
+            Olá, {data?.name || "usuário"}!
+          </h1>
           <p className="text-sm text-zinc-500">
             Bem vindo ao seu painel de controle financeiro!
           </p>
@@ -35,10 +44,10 @@ export default function NavBar() {
         <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm">
           <div className="w-9 h-9 bg-gray-300 rounded-full" />
           <div className="text-sm">
-            <p className="font-medium">Nathan Pedro Noser</p>
-            <p className="text-xs text-gray-400">teste@email.com</p>
+            <p className="font-medium">{data?.name || "usuário"}</p>
+            <p className="text-xs text-gray-400">{data?.email || "teste@email.com"}</p>
           </div>
-            <ChevronDown className="w-5 h-5 text-gray-400" />
+          <ChevronDown className="w-5 h-5 text-gray-400" />
         </div>
       </div>
     </header>
