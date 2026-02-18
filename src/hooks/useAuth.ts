@@ -1,21 +1,12 @@
-import { useEffect, useState } from "react";
-import api from "@/services/api";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
 
 export function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const context = useContext(AuthContext);
+  
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
 
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        await api.get("/auth/me");
-        setIsAuthenticated(true);
-      } catch {
-        setIsAuthenticated(false);
-      }
-    }
-
-    checkAuth();
-  }, []);
-
-  return { isAuthenticated };
+  return context;
 }

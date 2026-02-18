@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
-import { loginUser } from "../services/auth.service";
-import { router } from "@/router";
+import { useAuth } from "@/hooks/useAuth";
 
 const zodMessageMap: Record<string, (issue: any) => string> = {
   too_small: (issue) => {
@@ -37,6 +36,8 @@ export default function Login() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  
+  const { login } = useAuth(); // Using context
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,10 +59,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = { email, passwordHash };
-      await loginUser(data.email, data.passwordHash);
+      await login(email, passwordHash);
       console.log("User logged in successfully");
-      router.navigate("/dashboard");
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as any;

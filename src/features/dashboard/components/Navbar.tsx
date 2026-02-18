@@ -1,12 +1,12 @@
 import { Search, Bell, CircleAlert, ChevronDown } from "lucide-react";
-import { useDashboard } from "../hooks/useDashboard";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NavBar() {
-  const { data, loading } = useDashboard();
-
-  if (loading) {
-    return <div className="space-y-6">Carregando...</div>;
-  }
+  const { user } = useAuth();
+  
+  // Como o AuthProvider gerencia o loading globalmente agora, 
+  // aqui podemos assumir que se o componente renderizou, a auth já foi checada.
+  // Mas o user pode ser null se não estiver logado (hipoteticamente, mas ProtectedRoute previne isso)
 
   return (
     <header className="w-full px-8 py-6 flex items-center justify-between">
@@ -20,7 +20,7 @@ export default function NavBar() {
         />
         <div className="ml-6">
           <h1 className="text-2xl font-semibold">
-            Olá, {data?.name || "usuário"}!
+            Olá, {user?.name || "usuário"}!
           </h1>
           <p className="text-sm text-zinc-500">
             Bem vindo ao seu painel de controle financeiro!
@@ -44,8 +44,8 @@ export default function NavBar() {
         <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm">
           <div className="w-9 h-9 bg-gray-300 rounded-full" />
           <div className="text-sm">
-            <p className="font-medium">{data?.name || "usuário"}</p>
-            <p className="text-xs text-gray-400">{data?.email || "teste@email.com"}</p>
+            <p className="font-medium">{user?.name || "usuário"}</p>
+            <p className="text-xs text-gray-400">{user?.email || "email@exemplo.com"}</p>
           </div>
           <ChevronDown className="w-5 h-5 text-gray-400" />
         </div>
