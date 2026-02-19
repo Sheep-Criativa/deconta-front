@@ -64,7 +64,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
 
       {/* LEFT SIDE – IMAGE / BRAND */}
       <div className="hidden lg:flex items-center justify-center relative overflow-hidden">
-        {/* BRAND LOGO - Quase Estático */}
+        {/* BRAND LOGO */}
         <div 
           className="absolute top-8 left-8 z-10"
         >
