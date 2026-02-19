@@ -1,6 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard,
+  Building,
   CreditCard,
   History,
   Settings,
@@ -11,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { icon: LayoutDashboard, path: "/dashboard", label: "Dashboard" },
+  { icon: Building, path: "/account", label: "Conta" },
   { icon: CreditCard, path: "/cards", label: "Cartões" },
   { icon: History, path: "/history", label: "Histórico" },
 ];

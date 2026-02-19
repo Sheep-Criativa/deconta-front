@@ -3,6 +3,7 @@ import Register from "@/features/auth/pages/Register";
 import Login from "@/features/auth/pages/Login";
 import DashboardLayout from "@/features/dashboard/layout/DashboardLayout";
 import DashboardHome from "@/features/dashboard/pages/DashboardHome";
+import Accounts from "@/features/dashboard/pages/Accounts";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -25,9 +26,11 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           {
-            path: "/dashboard",
             element: <DashboardLayout />,
-            children: [{ index: true, element: <DashboardHome /> }],
+            children: [
+              { path: "/dashboard", element: <DashboardHome /> },
+              { path: "/account", element: <Accounts /> },
+            ],
           },
         ],
       },

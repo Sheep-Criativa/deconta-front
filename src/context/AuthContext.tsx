@@ -25,7 +25,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!userData || Object.keys(userData).length === 0) {
           setUser(null);
         } else {
-          setUser(userData);
+        // Backend return userID, but we map to id for consistency
+        const mappedUser = {
+          ...userData,
+          id: (userData as any).userId || (userData as any).id,
+        };
+        setUser(mappedUser);
         }
       } catch (error) {
         setUser(null);
@@ -46,7 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          throw new Error("Falha ao recuperar dados do usuário após login. Resposta vazia.");
       }
 
-      setUser(userData);
+      const mappedUser = {
+        ...userData,
+        id: (userData as any).userId || (userData as any).id,
+      };
+      setUser(mappedUser);
       navigate("/dashboard");
     } catch (error) {
       console.error("Login ou fetch user falhou", error);
