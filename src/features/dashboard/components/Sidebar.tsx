@@ -7,12 +7,14 @@ import {
   Settings,
   CircleHelp,
   LogOut,
+  Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { icon: LayoutDashboard, path: "/dashboard", label: "Dashboard" },
   { icon: Building, path: "/account", label: "Conta" },
+  { icon: Users, path: "/responsibles", label: "Responsáveis" },
   { icon: CreditCard, path: "/cards", label: "Cartões" },
   { icon: History, path: "/history", label: "Histórico" },
 ];
