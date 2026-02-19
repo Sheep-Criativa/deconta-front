@@ -27,7 +27,7 @@ export default function Sidebar() {
     const isActive = pathname === path;
     return `w-10 h-10 rounded-full flex items-center justify-center transition-all ${
       isActive 
-        ? "bg-yellow-400 text-white shadow-lg shadow-yellow-200" 
+        ? "bg-gray-400 text-white shadow-inner shadow-gray-500" 
         : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
     }`;
   };

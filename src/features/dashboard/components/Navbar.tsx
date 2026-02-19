@@ -30,7 +30,7 @@ export default function NavBar() {
         <img
           src="/images/simbolo-logo.png"
           alt="Logotipo De Conta"
-          className="w-14 ml-1"
+          className="w-11 ml-2"
         />
         <div className="ml-6">
           <h1 className="text-2xl font-semibold">
