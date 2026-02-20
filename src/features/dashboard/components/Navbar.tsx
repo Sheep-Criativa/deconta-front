@@ -1,5 +1,6 @@
 import { Search, Bell, CircleAlert, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,10 +77,12 @@ export default function NavBar() {
           <DropdownMenuContent align="end" className="w-56 bg-white">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer hover:bg-gray-50">
-              <UserIcon className="mr-2 h-4 w-4" />
-              <span>Perfil</span>
-            </DropdownMenuItem>
+            <Link to="/profile">
+              <DropdownMenuItem className="cursor-pointer hover:bg-gray-50">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </DropdownMenuItem>
+            </Link>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 hover:bg-red-50" onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />

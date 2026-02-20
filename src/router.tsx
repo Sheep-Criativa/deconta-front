@@ -5,6 +5,7 @@ import DashboardLayout from "@/features/dashboard/layout/DashboardLayout";
 import DashboardHome from "@/features/dashboard/pages/DashboardHome";
 import Accounts from "@/features/dashboard/pages/Accounts";
 import Responsibles from "@/features/dashboard/pages/Responsibles";
+import Profile from "@/features/dashboard/pages/Profile";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/register", element: <Register /> },
       { path: "/login", element: <Login /> },
+      { path: "/profile", element: <Profile /> },
 
       {
         element: <ProtectedRoute />,
