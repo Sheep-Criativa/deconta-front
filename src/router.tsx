@@ -8,6 +8,7 @@ import Responsibles from "@/features/dashboard/pages/Responsibles";
 import Profile from "@/features/dashboard/pages/Profile";
 import Categories from "@/features/dashboard/pages/Categories";
 import CreditCards from "@/features/dashboard/pages/CreditCards";
+import Transactions from "@/features/dashboard/pages/Transactions";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
               { path: "/responsibles", element: <Responsibles /> },
               { path: "/categories", element: <Categories /> },
               { path: "/cards", element: <CreditCards /> },
+              { path: "/history", element: <Transactions /> },
             ],
           },
         ],

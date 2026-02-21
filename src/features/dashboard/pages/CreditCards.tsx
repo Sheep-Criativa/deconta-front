@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// ─── Mini Credit Card Component ────────────────────────────────────────────────
 function CardVisual({ name, limit, used }: { name: string; limit: number; used: number }) {
   return (
     <div className="relative w-full aspect-[1.7/1] rounded-3xl bg-zinc-900 p-7 text-white overflow-hidden shadow-2xl">
@@ -250,9 +249,9 @@ export default function CreditCards() {
         </div>
         <Button
           onClick={() => setIsCreateOpen(true)}
-          className="rounded-xl bg-zinc-900 hover:bg-zinc-800 font-bold px-5 h-10 text-sm gap-2"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 px-6 shadow-lg shadow-emerald-600/20 font-bold transition-all active:scale-95"
         >
-          <Plus size={16} /> Novo Cartão
+          <Plus className="mr-2 h-5 w-5" /> Novo Cartão
         </Button>
       </div>
 
