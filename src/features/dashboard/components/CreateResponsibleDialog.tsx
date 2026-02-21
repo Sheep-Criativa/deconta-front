@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { createResponsible, updateResponsible, type Responsible } from "../services/responsible.service";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres").max(100),
@@ -57,12 +58,13 @@ export function CreateResponsibleDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       color: "#10b981",
-      isActive: true, // This matches z.boolean().default(true)
+      isActive: true,
     },
   });
 
@@ -95,17 +97,20 @@ export function CreateResponsibleDialog({
            userId: user.id,
            ...values
         });
+        toast.success("Responsável atualizado!");
       } else {
         await createResponsible({
           userId: user.id,
           ...values,
         });
+        toast.success("Responsável criado!");
       }
       
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save responsible", error);
+      toast.error("Erro ao salvar responsável.");
     } finally {
       setLoading(false);
     }

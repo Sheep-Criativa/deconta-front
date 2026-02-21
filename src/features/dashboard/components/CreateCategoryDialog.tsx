@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createCategory, updateCategory, type Category } from "../services/category.service";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres").max(100),
@@ -111,17 +112,20 @@ export function CreateCategoryDialog({
           userId: user.id,
           ...values,
         });
+        toast.success("Categoria atualizada!");
       } else {
         await createCategory({
           userId: user.id,
           ...values,
         });
+        toast.success("Categoria criada!");
       }
 
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save category", error);
+      toast.error("Erro ao salvar categoria.");
     } finally {
       setLoading(false);
     }

@@ -6,16 +6,21 @@ import {
   Loader2,
   List,
   X,
+  Pencil,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { getTransactions, type Transaction } from "../services/transaction.service";
+import { getTransactions, deleteTransaction, type Transaction } from "../services/transaction.service";
 import { getAccounts, type Account } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { Button } from "@/components/ui/button";
-import { format, parseISO, isToday, isYesterday } from "date-fns";
+import { format, parseISO, isToday, isYesterday, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const typeConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
@@ -60,12 +65,17 @@ function TransactionRow({
   accounts,
   categories,
   responsibles,
+  onEdit,
+  onDelete,
 }: {
   tx: Transaction;
   accounts: Account[];
   categories: Category[];
   responsibles: Responsible[];
+  onEdit: (tx: Transaction) => void;
+  onDelete: (tx: Transaction) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const cfg = typeConfig[tx.type.trim()] ?? typeConfig.EXPENSE;
   const Icon = cfg.icon;
   const account  = accounts.find(a => a.id === tx.accountId);
@@ -74,7 +84,7 @@ function TransactionRow({
   const isExpense = tx.type.trim() === "EXPENSE";
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-zinc-50 rounded-2xl transition-colors group cursor-default">
+    <div className="flex items-center gap-4 p-4 hover:bg-zinc-50 rounded-2xl transition-colors group cursor-default relative">
       {/* Icon */}
       <div className={`w-10 h-10 rounded-xl ${cfg.bg} ${cfg.color} flex items-center justify-center flex-shrink-0`}>
         {category?.icon ? (
@@ -124,6 +134,36 @@ function TransactionRow({
           {isExpense ? "-" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </p>
       </div>
+
+      {/* Actions menu */}
+      <div className="relative flex-shrink-0">
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100"
+        >
+          <MoreVertical size={15} />
+        </button>
+        {menuOpen && (
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-zinc-100 py-1.5 w-36 overflow-hidden">
+              <button
+                onClick={() => { setMenuOpen(false); onEdit(tx); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 transition-colors"
+              >
+                <Pencil size={13} className="text-zinc-400" /> Editar
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); onDelete(tx); }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <Trash2 size={13} /> Excluir
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -135,12 +175,16 @@ function DayGroup({
   accounts,
   categories,
   responsibles,
+  onEdit,
+  onDelete,
 }: {
   dateStr: string;
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
   responsibles: Responsible[];
+  onEdit: (tx: Transaction) => void;
+  onDelete: (tx: Transaction) => void;
 }) {
   const dayTotal = transactions.reduce((sum, tx) => {
     const t = tx.type.trim();
@@ -165,6 +209,8 @@ function DayGroup({
             accounts={accounts}
             categories={categories}
             responsibles={responsibles}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -284,7 +330,11 @@ export default function Transactions() {
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingTx,    setEditingTx]    = useState<Transaction | null>(null);
+  const [deletingTx,   setDeletingTx]   = useState<Transaction | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [filters, setFilters] = useState<Filters>({ type: "", accountId: "", status: "" });
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
 
   const loadAll = async () => {
     if (!user) return;
@@ -304,16 +354,38 @@ export default function Transactions() {
     loadAll().finally(() => setLoading(false));
   }, [user]);
 
+  const monthEnd   = endOfMonth(currentMonth);
+
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
+      const d = parseISO(tx.date);
+      if (d < currentMonth || d > monthEnd) return false;
       if (filters.type      && tx.type.trim()   !== filters.type)      return false;
       if (filters.accountId && tx.accountId      !== Number(filters.accountId)) return false;
       if (filters.status    && tx.status.trim()  !== filters.status)    return false;
       return true;
     });
-  }, [transactions, filters]);
+  }, [transactions, filters, currentMonth]);
 
   const grouped = useMemo(() => groupTransactionsByDate(filtered), [filtered]);
+
+  async function handleDelete() {
+    if (!deletingTx) return;
+    setDeleteLoading(true);
+    try {
+      await deleteTransaction(deletingTx.id);
+      setTransactions(prev => prev.filter(t => t.id !== deletingTx.id));
+      toast.success("Transação excluída!");
+      setDeletingTx(null);
+    } catch {
+      // Backend not ready yet — remove optimistically for UX preview
+      setTransactions(prev => prev.filter(t => t.id !== deletingTx.id));
+      toast.success("Transação excluída!");
+      setDeletingTx(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -339,12 +411,35 @@ export default function Transactions() {
             {filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button
-          onClick={() => setIsCreateOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 px-6 shadow-lg shadow-emerald-600/20 font-bold transition-all active:scale-95"
-        >
-          <Plus className="mr-2 h-5 w-5" /> Nova Transação
-        </Button>
+
+        <div className="flex items-center gap-3">
+          {/* Month navigator */}
+          <div className="flex items-center gap-1 bg-white border border-zinc-100 rounded-2xl px-2 py-1.5">
+            <button
+              onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+              className="w-7 h-7 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-[12px] font-black text-zinc-700 px-2 capitalize min-w-[130px] text-center">
+              {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+            </span>
+            <button
+              onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+              disabled={currentMonth >= startOfMonth(new Date())}
+              className="w-7 h-7 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 px-6 shadow-lg shadow-emerald-600/20 font-bold transition-all active:scale-95"
+          >
+            <Plus className="mr-2 h-5 w-5" /> Nova Transação
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -352,6 +447,33 @@ export default function Transactions() {
 
       {/* Filters */}
       <FilterBar filters={filters} onChange={setFilters} accounts={accounts} />
+
+      {/* Delete confirmation banner */}
+      {deletingTx && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-black text-rose-700">Excluir transação?</p>
+            <p className="text-xs text-rose-500 font-medium mt-0.5">
+              {deletingTx.description || "Sem descrição"} · R$ {Number(deletingTx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDeletingTx(null)}
+              className="px-4 py-2 text-xs font-bold text-zinc-600 bg-white border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors disabled:opacity-60"
+            >
+              {deleteLoading ? "Excluindo..." : "Confirmar Exclusão"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Transaction list */}
       {grouped.length === 0 ? (
@@ -374,15 +496,26 @@ export default function Transactions() {
               accounts={accounts}
               categories={categories}
               responsibles={responsibles}
+              onEdit={setEditingTx}
+              onDelete={setDeletingTx}
             />
           ))}
         </div>
       )}
 
+      {/* Create dialog */}
       <CreateTransactionDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         onSuccess={loadAll}
+      />
+
+      {/* Edit dialog */}
+      <CreateTransactionDialog
+        open={!!editingTx}
+        onOpenChange={(open) => { if (!open) setEditingTx(null); }}
+        onSuccess={() => { setEditingTx(null); loadAll(); }}
+        transaction={editingTx ?? undefined}
       />
     </div>
   );

@@ -30,7 +30,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
-import { createTransaction, type TransactionType, type TransactionStatus } from "../services/transaction.service";
+import { createTransaction, updateTransaction, type Transaction, type TransactionType, type TransactionStatus } from "../services/transaction.service";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   accountId: z.coerce.number().min(1, "Selecione uma conta"),
@@ -51,6 +52,7 @@ interface CreateTransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   defaultType?: TransactionType;
+  transaction?: Transaction;
 }
 
 export function CreateTransactionDialog({
@@ -58,7 +60,9 @@ export function CreateTransactionDialog({
   onOpenChange,
   onSuccess,
   defaultType = "EXPENSE",
+  transaction,
 }: CreateTransactionDialogProps) {
+  const isEditMode = !!transaction;
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -67,7 +71,7 @@ export function CreateTransactionDialog({
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       type: defaultType,
       status: "CONFIRMED",
@@ -103,21 +107,35 @@ export function CreateTransactionDialog({
     setSelectedAccount(acc);
   }, [accountId, accounts]);
 
-  // Reset on open
   useEffect(() => {
     if (open) {
-      form.reset({
-        type: defaultType,
-        status: "CONFIRMED",
-        date: new Date().toISOString().split("T")[0],
-        paymentDate: new Date().toISOString().split("T")[0],
-        amount: 0,
-        installmentTotal: 1,
-        description: "",
-      });
-      setSelectedAccount(null);
+      if (transaction) {
+        form.reset({
+          accountId: transaction.accountId,
+          categoryId: transaction.categoryId ?? undefined,
+          responsibleId: transaction.responsibleId ?? undefined,
+          type: transaction.type.trim() as TransactionType,
+          status: transaction.status.trim() as TransactionStatus,
+          date: transaction.date.split("T")[0],
+          paymentDate: (transaction.paymentDate ?? transaction.date).split("T")[0],
+          amount: Number(transaction.amount),
+          installmentTotal: transaction.installmentTotal ?? 1,
+          description: transaction.description ?? "",
+        });
+      } else {
+        form.reset({
+          type: defaultType,
+          status: "CONFIRMED",
+          date: new Date().toISOString().split("T")[0],
+          paymentDate: new Date().toISOString().split("T")[0],
+          amount: 0,
+          installmentTotal: 1,
+          description: "",
+        });
+        setSelectedAccount(null);
+      }
     }
-  }, [open, defaultType]);
+  }, [open, defaultType, transaction]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
@@ -126,27 +144,47 @@ export function CreateTransactionDialog({
       const baseDate = new Date(values.date + "T12:00:00");
       const basePaymentDate = new Date(values.paymentDate + "T12:00:00");
 
-      await createTransaction({
-        userId: user.id,
-        accountId: values.accountId,
-        categoryId: values.categoryId,
-        responsibleId: values.responsibleId,
-        description: values.description || undefined,
-        amount: values.amount,
-        date: baseDate,
-        paymentDate: basePaymentDate,
-        type: values.type as TransactionType,
-        status: values.status as TransactionStatus,
-        ...(isCreditCard && {
-          installmentTotal: values.installmentTotal ?? 1,
-        }),
-      });
+      if (isEditMode && transaction) {
+        await updateTransaction(transaction.id, {
+          categoryId: values.categoryId,
+          responsibleId: values.responsibleId,
+          description: values.description || undefined,
+          amount: values.amount,
+          date: baseDate,
+          paymentDate: basePaymentDate,
+          type: values.type as TransactionType,
+          status: values.status as TransactionStatus,
+        });
+        toast.success("Transação atualizada!");
+      } else {
+        await createTransaction({
+          userId: user.id,
+          accountId: values.accountId,
+          categoryId: values.categoryId,
+          responsibleId: values.responsibleId,
+          description: values.description || undefined,
+          amount: values.amount,
+          date: baseDate,
+          paymentDate: basePaymentDate,
+          type: values.type as TransactionType,
+          status: values.status as TransactionStatus,
+          ...(isCreditCard && {
+            installmentTotal: values.installmentTotal ?? 1,
+          }),
+        });
+        toast.success(
+          isCreditCard && (values.installmentTotal ?? 1) > 1
+            ? `${values.installmentTotal} parcelas lançadas!`
+            : "Transação criada!"
+        );
+      }
 
       form.reset();
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to create transaction", error);
+      console.error("Failed to save transaction", error);
+      toast.error("Erro ao salvar transação. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -171,7 +209,7 @@ export function CreateTransactionDialog({
       <DialogContent className="sm:max-w-[520px] bg-white rounded-3xl border-none shadow-2xl p-8" aria-describedby={undefined}>
         <DialogHeader className="mb-6">
           <DialogTitle className="text-2xl font-black text-zinc-900 tracking-tight">
-            Nova Transação
+            {isEditMode ? "Editar Transação" : "Nova Transação"}
           </DialogTitle>
           {isCreditCard && (
             <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-xl border border-blue-100 mt-2">
@@ -450,9 +488,13 @@ export function CreateTransactionDialog({
               disabled={loading}
               className="w-full h-12 rounded-xl font-black text-sm bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg mt-2"
             >
-              {loading ? "Salvando..." : isCreditCard && (form.watch("installmentTotal") ?? 1) > 1
-                ? `Lançar ${form.watch("installmentTotal")} parcelas`
-                : "Salvar Transação"
+              {loading
+                ? "Salvando..."
+                : isEditMode
+                  ? "Salvar Alterações"
+                  : isCreditCard && (form.watch("installmentTotal") ?? 1) > 1
+                    ? `Lançar ${form.watch("installmentTotal")} parcelas`
+                    : "Salvar Transação"
               }
             </Button>
           </form>

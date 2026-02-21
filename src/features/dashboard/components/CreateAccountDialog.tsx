@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { createAccount, AccountType } from "../services/account.service";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres").max(100),
@@ -123,10 +124,12 @@ export function CreateAccountDialog({
       }
 
       form.reset();
+      toast.success("Conta criada com sucesso!");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to create account", error);
+      toast.error("Erro ao criar conta. Tente novamente.");
     } finally {
       setLoading(false);
     }

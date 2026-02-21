@@ -42,9 +42,18 @@ export interface CreateTransactionDTO {
   recurrenceId?: number | null;
 }
 
+export interface UpdateTransactionDTO {
+  categoryId?: number;
+  responsibleId?: number;
+  description?: string;
+  amount?: number;
+  date?: Date;
+  paymentDate?: Date;
+  type?: TransactionType;
+  status?: TransactionStatus;
+}
+
 export async function getTransactions(userId: number): Promise<Transaction[]> {
-  // Note: backend currently uses req.user from JWT, but some routes use /:userId
-  // Using /:userId param pattern consistent with other endpoints in this project
   const response = await api.get(`/transactions/${userId}`);
   return response.data;
 }
@@ -52,4 +61,13 @@ export async function getTransactions(userId: number): Promise<Transaction[]> {
 export async function createTransaction(data: CreateTransactionDTO): Promise<Transaction | Transaction[]> {
   const response = await api.post("/transactions", data);
   return response.data;
+}
+
+export async function updateTransaction(id: number, data: UpdateTransactionDTO): Promise<Transaction> {
+  const response = await api.put(`/transactions/${id}`, data);
+  return response.data;
+}
+
+export async function deleteTransaction(id: number): Promise<void> {
+  await api.delete(`/transactions/${id}`);
 }
