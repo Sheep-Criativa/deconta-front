@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -42,12 +42,14 @@ interface CreateAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  defaultType?: AccountType;
 }
 
 export function CreateAccountDialog({
   open,
   onOpenChange,
   onSuccess,
+  defaultType,
 }: CreateAccountDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -56,11 +58,29 @@ export function CreateAccountDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: AccountType.CHECKING,
+      type: defaultType ?? AccountType.CHECKING,
       initialBalance: 0,
       currencyCode: "BRL",
+      closingDay: "",
+      dueDay: "",
+      limitAmount: 0,
     },
   });
+
+  // Reset form with correct type when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: "",
+        type: defaultType ?? AccountType.CHECKING,
+        initialBalance: 0,
+        currencyCode: "BRL",
+        closingDay: "",
+        dueDay: "",
+        limitAmount: 0,
+      });
+    }
+  }, [open, defaultType]);
 
   const accountType = form.watch("type");
 
@@ -69,24 +89,39 @@ export function CreateAccountDialog({
 
     setLoading(true);
     try {
-      const payload: any = {
-        ...values,
-        userId: user.id,
-        currentBalance: values.initialBalance,
-        isActive: true,
-      };
-
       if (values.type === AccountType.CREDIT_CARD) {
-         if (values.dueDay) {
-            payload.dueDay = new Date(values.dueDay);
-         }
+        const payload: any = {
+          userId: user.id,
+          name: values.name,
+          type: values.type,
+          initialBalance: values.initialBalance,
+          currentBalance: values.initialBalance,
+          currencyCode: values.currencyCode,
+          isActive: true,
+          closingDay: values.closingDay ?? null,
+          limitAmount: values.limitAmount ?? null,
+        };
+
+        // dueDay comes as "YYYY-MM-DD" string from input, must be a Date for backend
+        if (values.dueDay) {
+          // Add time to avoid timezone shift (treat as local noon)
+          payload.dueDay = new Date(values.dueDay + "T12:00:00");
+        }
+
+        await createAccount(payload);
       } else {
-         delete payload.closingDay;
-         delete payload.dueDay;
-         delete payload.limitAmount;
+        const payload: any = {
+          userId: user.id,
+          name: values.name,
+          type: values.type,
+          initialBalance: values.initialBalance,
+          currentBalance: values.initialBalance,
+          currencyCode: values.currencyCode,
+          isActive: true,
+        };
+        await createAccount(payload);
       }
-      
-      await createAccount(payload);
+
       form.reset();
       onSuccess();
       onOpenChange(false);
