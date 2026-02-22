@@ -10,6 +10,7 @@ import Categories from "@/features/dashboard/pages/Categories";
 import CreditCards from "@/features/dashboard/pages/CreditCards";
 import Transactions from "@/features/dashboard/pages/Transactions";
 import StatementDetail from "@/features/dashboard/pages/StatementDetail";
+import ReportBug from "@/features/dashboard/pages/ReportBug";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
               { path: "/history",     element: <Transactions /> },
               { path: "/profile",     element: <Profile /> },
               { path: "/cards/:cardId/statement/:statementId", element: <StatementDetail /> },
+              { path: "/report-bug", element: <ReportBug /> },
             ],
           },
         ],

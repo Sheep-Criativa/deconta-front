@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { format, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// ── Status helpers ──────────────────────────────────────────────────────────
+// Status helpers
 const statusConfig = {
   OPEN:           { label: "Aberta",  bg: "bg-emerald-50",  text: "text-emerald-700",  dot: "bg-emerald-500", icon: Clock },
   CLOSED:         { label: "Fechada", bg: "bg-amber-50",    text: "text-amber-700",    dot: "bg-amber-500",   icon: AlertCircle },
@@ -30,7 +30,7 @@ const statusConfig = {
   PARTIALLY_PAID: { label: "Parcial", bg: "bg-indigo-50",   text: "text-indigo-700",   dot: "bg-indigo-500",  icon: AlertCircle },
 };
 
-// ── Transaction row ─────────────────────────────────────────────────────────
+// Transaction row
 function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) {
   const isExpense = tx.type.trim() === "EXPENSE";
   const category  = categories.find(c => c.id === tx.categoryId);
@@ -65,7 +65,7 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
   );
 }
 
-// ── KPI chip ────────────────────────────────────────────────────────────────
+// KPI chip
 function KpiChip({ label, value, sub, highlight }: {
   label: string; value: string; sub?: string; highlight?: boolean;
 }) {
@@ -84,7 +84,7 @@ function KpiChip({ label, value, sub, highlight }: {
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
+// Main page
 export default function StatementDetail() {
   const { cardId, statementId } = useParams<{ cardId: string; statementId: string }>();
   const { state }   = useLocation();          // may contain { statement, card } passed from CreditCards

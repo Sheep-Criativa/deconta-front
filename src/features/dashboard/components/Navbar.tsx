@@ -45,16 +45,18 @@ export default function NavBar() {
 
       {/* Área direita */}
       <div className="flex items-center gap-6">
-        <div className="relative">
+        {/* <div className="relative">
           <input
             placeholder="Pesquisar..."
             className="w-72 h-10 px-4 rounded-full border border-gray-200 text-sm outline-none"
           />
           <Search className="text-gray-400 absolute right-3 top-2" />
-        </div>
+        </div> */}
 
-        <Bell className="w-6 h-6 text-gray-400 cursor-pointer" />
-        <CircleAlert className="w-6 h-6 text-gray-400 cursor-pointer" />
+        <Bell className="w-6 h-6 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
+        <Link to="/report-bug" title="Reportar Problema">
+          <CircleAlert className="w-6 h-6 text-gray-400 cursor-pointer hover:text-amber-500 transition-colors" />
+        </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">

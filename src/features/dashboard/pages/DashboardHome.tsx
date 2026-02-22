@@ -250,16 +250,6 @@ export default function DashboardHome() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-black text-zinc-900 tracking-tight">
-          Olá, {user?.name?.split(" ")[0]}!
-        </h1>
-        <p className="text-zinc-400 text-sm font-medium mt-0.5">
-          {format(now, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-        </p>
-      </div>
-
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard
