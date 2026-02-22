@@ -8,54 +8,48 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, passwordHash: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+function mapUser(userData: any): User {
+  return {
+    ...userData,
+    id: userData.userId || userData.id,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const userData = await getMe();
-        
-        if (!userData || Object.keys(userData).length === 0) {
-          setUser(null);
-        } else {
-        // Backend return userID, but we map to id for consistency
-        const mappedUser = {
-          ...userData,
-          id: (userData as any).userId || (userData as any).id,
-        };
-        setUser(mappedUser);
-        }
-      } catch (error) {
+  async function refreshUser() {
+    try {
+      const userData = await getMe();
+      if (!userData || Object.keys(userData).length === 0) {
         setUser(null);
-      } finally {
-        setIsLoading(false);
+      } else {
+        setUser(mapUser(userData));
       }
+    } catch {
+      setUser(null);
     }
+  }
 
-    checkAuth();
+  useEffect(() => {
+    refreshUser().finally(() => setIsLoading(false));
   }, []);
 
   async function login(email: string, passwordHash: string) {
     try {
       await loginUser(email, passwordHash);
       const userData = await getMe();
-      
       if (!userData || Object.keys(userData).length === 0) {
-         throw new Error("Falha ao recuperar dados do usuário após login. Resposta vazia.");
+        throw new Error("Falha ao recuperar dados do usuário após login. Resposta vazia.");
       }
-
-      const mappedUser = {
-        ...userData,
-        id: (userData as any).userId || (userData as any).id,
-      };
-      setUser(mappedUser);
+      setUser(mapUser(userData));
       navigate("/dashboard");
     } catch (error) {
       console.error("Login ou fetch user falhou", error);
@@ -81,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        refreshUser,
       }}
     >
       {children}

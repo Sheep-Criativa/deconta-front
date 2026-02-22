@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Plus, Tag, ChevronRight } from "lucide-react";
+import { Plus, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { type Category, getCategories, deleteCategory } from "../services/category.service";
 import { CategoryCard } from "../components/CategoryCard";
 import { CreateCategoryDialog } from "../components/CreateCategoryDialog";
+import { toast } from "sonner";
 
 export default function Categories() {
   const { user } = useAuth();
@@ -33,14 +34,13 @@ export default function Categories() {
 
   async function handleDelete(id: number) {
     if (!user) return;
-    if (!confirm("Deseja realmente excluir esta categoria? Transactions vinculadas podem ser afetadas.")) return;
-    
     try {
       await deleteCategory(id, user.id);
-      fetchCategories();
+      setCategories(prev => prev.filter(c => c.id !== id));
+      toast.success("Categoria excluída!");
     } catch (error) {
       console.error("Failed to delete category", error);
-      alert("Erro ao excluir. Verifique se existem transações nesta categoria.");
+      toast.error("Erro ao excluir. Pode haver transações vinculadas.");
     }
   }
 

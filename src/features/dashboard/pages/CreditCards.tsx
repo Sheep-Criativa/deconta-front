@@ -3,10 +3,6 @@ import {
   CreditCard as CardIcon,
   Plus,
   Loader2,
-  ShoppingBag,
-  Utensils,
-  Dumbbell,
-  Car,
   MoreHorizontal,
   TrendingUp,
   ArrowUpRight,
@@ -16,10 +12,13 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getStatements, type Statement } from "../services/credit-card.service";
+import { getTransactions, type Transaction } from "../services/transaction.service";
+import { getCategories, type Category } from "../services/category.service";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 function CardVisual({ name, limit, used }: { name: string; limit: number; used: number }) {
   return (
@@ -100,13 +99,17 @@ const statusStyles = {
   PARTIALLY_PAID: { label: "Parcial",  dot: "bg-indigo-500",  text: "text-indigo-600",  bg: "bg-indigo-50"  },
 };
 
-function StatementCard({ statement }: { statement: Statement }) {
-  const s = statusStyles[statement.status];
+function StatementCard({ statement, onClick }: { statement: Statement; card: Account; onClick: () => void }) {
+  const normalizedStatus = statement.status?.trim() as keyof typeof statusStyles;
+  const s = statusStyles[normalizedStatus] ?? statusStyles.OPEN;
   const month = format(new Date(statement.dueDate), "MMM", { locale: ptBR });
   const year  = format(new Date(statement.dueDate), "yyyy");
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-zinc-100 hover:shadow-md hover:border-emerald-100 transition-all group">
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-2xl p-5 border border-zinc-100 hover:shadow-md hover:border-emerald-100 transition-all group"
+    >
       <div className="flex justify-between items-start mb-4">
         <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
           <CardIcon size={18} className={s.text} />
@@ -124,36 +127,33 @@ function StatementCard({ statement }: { statement: Statement }) {
       <p className="text-zinc-400 text-xs font-medium mt-1">
         Vence em {format(new Date(statement.dueDate), "dd/MM")}
       </p>
-    </div>
+    </button>
   );
 }
 
-// ─── Mock Transaction Row (visual only - transactions need its own API later) ──
-const mockTransactions = [
-  { icon: ShoppingBag, label: "Shopping",  date: "06 Jun 2020", amount: 300,  type: "EXPENSE" },
-  { icon: Utensils,    label: "Restaurante", date: "01 Jun 2020", amount: 45,   type: "EXPENSE" },
-  { icon: Dumbbell,    label: "Academia",  date: "28 Jun 2020", amount: 125,  type: "EXPENSE" },
-  { icon: Car,         label: "Estacionamento", date: "07 Jun 2020", amount: 90, type: "EXPENSE" },
-];
+// ─── Real Transaction Row ───────────────────────────────────────────────────────────
+function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) {
+  const isExpense = tx.type.trim() === "EXPENSE";
+  const category  = categories.find(c => c.id === tx.categoryId);
+  const label     = tx.description || category?.name || (isExpense ? "Despesa" : "Receita");
+  const dateStr   = format(parseISO(tx.date), "dd MMM yyyy", { locale: ptBR });
 
-function TransactionRow({ icon: Icon, label, date, amount, type }: typeof mockTransactions[0]) {
-  const isExpense = type === "EXPENSE";
   return (
     <div className="flex items-center py-4 border-b border-zinc-50 last:border-0 group">
-      <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center mr-3 group-hover:bg-emerald-50 group-hover:text-emerald-600 text-zinc-500 transition-colors">
-        <Icon size={16} />
+      <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center mr-3 text-lg flex-shrink-0">
+        {category?.icon ?? (isExpense ? "💳" : "💰")}
       </div>
-      <div className="flex-1">
-        <p className="text-sm font-bold text-zinc-800">{label}</p>
-        <p className="text-[11px] text-zinc-400 font-medium">{date}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-zinc-800 truncate">{label}</p>
+        <p className="text-[11px] text-zinc-400 font-medium capitalize">{dateStr}</p>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {isExpense
           ? <ArrowDownRight size={14} className="text-rose-400" />
           : <ArrowUpRight size={14} className="text-emerald-400" />
         }
         <span className={`text-sm font-black ${isExpense ? "text-zinc-800" : "text-emerald-600"}`}>
-          {isExpense ? "-" : "+"}R$ {amount.toLocaleString("pt-BR")}
+          {isExpense ? "-" : "+"}R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </span>
       </div>
       <button className="ml-3 text-zinc-300 hover:text-zinc-500 transition-colors">
@@ -196,18 +196,26 @@ function LimitRing({ used, limit }: { used: number; limit: number }) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function CreditCards() {
   const { user } = useAuth();
-  const [cards, setCards]             = useState<Account[]>([]);
-  const [selectedCard, setSelectedCard] = useState<Account | null>(null);
-  const [statements, setStatements]   = useState<Statement[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [loadingStmts, setLoadingStmts] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const navigate  = useNavigate();
+  const [cards, setCards]               = useState<Account[]>([]);
+  const [selectedCard, setSelectedCard]   = useState<Account | null>(null);
+  const [statements, setStatements]       = useState<Statement[]>([]);
+  const [transactions, setTransactions]   = useState<Transaction[]>([]);
+  const [categories, setCategories]       = useState<Category[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [loadingStmts, setLoadingStmts]   = useState(false);
+  const [loadingTxs, setLoadingTxs]       = useState(false);
+  const [isCreateOpen, setIsCreateOpen]   = useState(false);
 
   const loadCards = async () => {
     if (!user) return;
-    const accounts = await getAccounts(user.id);
+    const [accounts, cats] = await Promise.all([
+      getAccounts(user.id),
+      getCategories(user.id),
+    ]);
     const cc = accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
     setCards(cc);
+    setCategories(cats);
     if (cc.length > 0) setSelectedCard(prev => prev ?? cc[0]);
   };
 
@@ -222,6 +230,14 @@ export default function CreditCards() {
       .then(setStatements)
       .catch(console.error)
       .finally(() => setLoadingStmts(false));
+
+    // Load real transactions for this card
+    if (!user) return;
+    setLoadingTxs(true);
+    getTransactions(user.id)
+      .then(txs => setTransactions(txs.filter(t => t.accountId === selectedCard.id)))
+      .catch(console.error)
+      .finally(() => setLoadingTxs(false));
   }, [selectedCard]);
 
   if (loading) {
@@ -297,11 +313,21 @@ export default function CreditCards() {
                   Ver todas <ChevronRight size={12} />
                 </button>
               </div>
-              <div>
-                {mockTransactions.map((tx, i) => (
-                  <TransactionRow key={i} {...tx} />
-                ))}
-              </div>
+              {loadingTxs ? (
+                <div className="space-y-3 mt-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="h-12 bg-zinc-50 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : transactions.length === 0 ? (
+                <p className="text-xs text-zinc-400 font-medium py-6 text-center">Nenhuma transação neste cartão.</p>
+              ) : (
+                <div>
+                  {transactions.slice(0, 5).map(tx => (
+                    <TxRow key={tx.id} tx={tx} categories={categories} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -320,7 +346,15 @@ export default function CreditCards() {
             ) : upcomingStmts.length > 0 ? (
               <div className="space-y-4">
                 {upcomingStmts.map(s => (
-                  <StatementCard key={s.id} statement={s} />
+                  <StatementCard
+                    key={s.id}
+                    statement={s}
+                    card={selectedCard!}
+                    onClick={() => navigate(
+                      `/cards/${selectedCard!.id}/statement/${s.id}`,
+                      { state: { statement: s, card: selectedCard } }
+                    )}
+                  />
                 ))}
               </div>
             ) : (
@@ -329,11 +363,21 @@ export default function CreditCards() {
               </div>
             )}
 
-            {/* All statements link */}
             {statements.length > upcomingStmts.length && (
-              <button className="w-full text-center text-[11px] font-bold text-zinc-400 hover:text-emerald-600 transition-colors py-2">
-                + {statements.length - upcomingStmts.length} faturas pagas anteriores
-              </button>
+              <div className="space-y-4 mt-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1">Faturas pagas</p>
+                {statements.filter(s => s.status === "PAID").map(s => (
+                  <StatementCard
+                    key={s.id}
+                    statement={s}
+                    card={selectedCard!}
+                    onClick={() => navigate(
+                      `/cards/${selectedCard!.id}/statement/${s.id}`,
+                      { state: { statement: s, card: selectedCard } }
+                    )}
+                  />
+                ))}
+              </div>
             )}
           </div>
 

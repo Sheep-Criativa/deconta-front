@@ -5,7 +5,6 @@ import {
   CreditCard,
   Tag,
   History,
-  Settings,
   CircleHelp,
   LogOut,
   Users,
@@ -13,12 +12,12 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, path: "/dashboard", label: "Dashboard" },
-  { icon: Building, path: "/account", label: "Conta" },
-  { icon: CreditCard, path: "/cards", label: "Cartões" },
-  { icon: Users, path: "/responsibles", label: "Responsáveis" },
-  { icon: Tag, path: "/categories", label: "Categorias" },
-  { icon: History, path: "/history", label: "Histórico" },
+  { icon: LayoutDashboard, path: "/dashboard",    label: "Dashboard"    },
+  { icon: Building,        path: "/account",      label: "Conta"        },
+  { icon: CreditCard,      path: "/cards",        label: "Cartões"      },
+  { icon: Users,           path: "/responsibles", label: "Responsáveis" },
+  { icon: Tag,             path: "/categories",   label: "Categorias"   },
+  { icon: History,         path: "/history",      label: "Histórico"    },
 ];
 
 export default function Sidebar() {

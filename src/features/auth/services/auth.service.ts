@@ -31,7 +31,7 @@ export async function logoutUser() {
   await api.post('/auth/logout');
 }
 
-export async function updateUser(id: number, data: { name: string; email: string }) {
+export async function updateUser(id: number, data: { name: string; email: string; passwordHash: string }) {
   const response = await api.put(`/users/${id}`, data);
-  return response.data;
+  return response.data as User;
 }

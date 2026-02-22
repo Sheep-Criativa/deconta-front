@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { type Account, getAccounts, deleteAccount } from "../services/account.service";
 import { AccountCard } from "../components/AccountCard";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
+import { toast } from "sonner";
 
 export default function Accounts() {
   const { user } = useAuth();
@@ -31,19 +32,20 @@ export default function Accounts() {
 
   async function handleDelete(id: number) {
     if (!user) return;
-    if (!confirm("Tem certeza que deseja excluir esta conta?")) return;
-    
     try {
       await deleteAccount(id, user.id);
-      fetchAccounts();
+      setAccounts(prev => prev.filter(a => a.id !== id));
+      toast.success("Conta excluída!");
     } catch (error) {
       console.error("Failed to delete account", error);
+      toast.error("Erro ao excluir conta.");
     }
   }
 
-  async function handleEdit(account: Account) {
-    console.log("Edit account", account);
-    alert("Edição ainda não implementada (WIP)");
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  function handleEdit(account: Account) {
+    setEditingAccount(account);
   }
 
   return (
@@ -89,6 +91,11 @@ export default function Accounts() {
          open={isCreateOpen} 
          onOpenChange={setIsCreateOpen} 
          onSuccess={fetchAccounts} 
+      />
+      <CreateAccountDialog
+        open={!!editingAccount}
+        onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
+        onSuccess={() => { setEditingAccount(null); fetchAccounts(); }}
       />
     </div>
   );

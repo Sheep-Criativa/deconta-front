@@ -9,6 +9,7 @@ import Profile from "@/features/dashboard/pages/Profile";
 import Categories from "@/features/dashboard/pages/Categories";
 import CreditCards from "@/features/dashboard/pages/CreditCards";
 import Transactions from "@/features/dashboard/pages/Transactions";
+import StatementDetail from "@/features/dashboard/pages/StatementDetail";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -25,8 +26,7 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { path: "/register", element: <Register /> },
-      { path: "/login", element: <Login /> },
-      { path: "/profile", element: <Profile /> },
+      { path: "/login",    element: <Login /> },
 
       {
         element: <ProtectedRoute />,
@@ -34,12 +34,14 @@ export const router = createBrowserRouter([
           {
             element: <DashboardLayout />,
             children: [
-              { path: "/dashboard", element: <DashboardHome /> },
-              { path: "/account", element: <Accounts /> },
-              { path: "/responsibles", element: <Responsibles /> },
-              { path: "/categories", element: <Categories /> },
-              { path: "/cards", element: <CreditCards /> },
-              { path: "/history", element: <Transactions /> },
+              { path: "/dashboard",   element: <DashboardHome /> },
+              { path: "/account",     element: <Accounts /> },
+              { path: "/responsibles",element: <Responsibles /> },
+              { path: "/categories",  element: <Categories /> },
+              { path: "/cards",       element: <CreditCards /> },
+              { path: "/history",     element: <Transactions /> },
+              { path: "/profile",     element: <Profile /> },
+              { path: "/cards/:cardId/statement/:statementId", element: <StatementDetail /> },
             ],
           },
         ],
@@ -47,3 +49,4 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+

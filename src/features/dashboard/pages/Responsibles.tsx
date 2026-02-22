@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { type Responsible, getResponsibles, deleteResponsible } from "../services/responsible.service";
 import { ResponsibleCard } from "../components/ResponsibleCard";
 import { CreateResponsibleDialog } from "../components/CreateResponsibleDialog";
+import { toast } from "sonner";
 
 export default function Responsibles() {
   const { user } = useAuth();
@@ -32,14 +33,13 @@ export default function Responsibles() {
 
   async function handleDelete(id: number) {
     if (!user) return;
-    if (!confirm("Tem certeza que deseja excluir este responsável?")) return;
-    
     try {
       await deleteResponsible(id, user.id);
-      fetchResponsibles(); // Refresh list
+      setResponsibles(prev => prev.filter(r => r.id !== id));
+      toast.success("Responsável excluído!");
     } catch (error) {
       console.error("Failed to delete responsible", error);
-      alert("Erro ao excluir. Verifique se existem transações vinculadas.");
+      toast.error("Erro ao excluir. Pode haver transações vinculadas.");
     }
   }
 
