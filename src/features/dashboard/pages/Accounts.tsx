@@ -3,32 +3,43 @@ import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { type Account, getAccounts, deleteAccount } from "../services/account.service";
+import { getTransactions, type Transaction } from "../services/transaction.service";
 import { AccountCard } from "../components/AccountCard";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import { toast } from "sonner";
+import { buildBalanceMap } from "../utils/balanceUtils";
 
 export default function Accounts() {
   const { user } = useAuth();
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts,     setAccounts]     = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading,      setLoading]      = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
-  async function fetchAccounts() {
+  async function fetchData() {
     if (!user) return;
     try {
       setLoading(true);
-      const data = await getAccounts(user.id);
-      setAccounts(data);
+      const [accs, txs] = await Promise.all([
+        getAccounts(user.id),
+        getTransactions(user.id),
+      ]);
+      setAccounts(accs);
+      setTransactions(txs);
     } catch (error) {
-      console.error("Failed to fetch accounts", error);
+      console.error("Failed to fetch accounts/transactions", error);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchAccounts();
+    fetchData();
   }, [user]);
+
+  // Compute real balances from transactions
+  const balanceMap = buildBalanceMap(accounts, transactions);
 
   async function handleDelete(id: number) {
     if (!user) return;
@@ -41,8 +52,6 @@ export default function Accounts() {
       toast.error("Erro ao excluir conta.");
     }
   }
-
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   function handleEdit(account: Account) {
     setEditingAccount(account);
@@ -73,7 +82,8 @@ export default function Accounts() {
             {accounts.map((account) => (
                <AccountCard 
                   key={account.id} 
-                  account={account} 
+                  account={account}
+                  computedBalance={balanceMap.get(account.id)}
                   onEdit={handleEdit} 
                   onDelete={handleDelete} 
                />
@@ -90,13 +100,14 @@ export default function Accounts() {
       <CreateAccountDialog 
          open={isCreateOpen} 
          onOpenChange={setIsCreateOpen} 
-         onSuccess={fetchAccounts} 
+         onSuccess={fetchData} 
       />
       <CreateAccountDialog
         open={!!editingAccount}
         onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
-        onSuccess={() => { setEditingAccount(null); fetchAccounts(); }}
+        onSuccess={() => { setEditingAccount(null); fetchData(); }}
       />
     </div>
   );
 }
+

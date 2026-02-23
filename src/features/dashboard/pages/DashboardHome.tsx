@@ -16,6 +16,7 @@ import { getAccounts, type Account, AccountType } from "../services/account.serv
 import { getTransactions, type Transaction } from "../services/transaction.service";
 import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
+import { buildBalanceMap, computeTotalBalance } from "../utils/balanceUtils";
 
 // ─── Chart: Income vs Expense bar chart (last 6 months) ──────────────────────
 function buildMonthlyFlow(transactions: Transaction[]) {
@@ -99,6 +100,67 @@ function KpiCard({
   );
 }
 
+// ── Balance Card with per-account mini chart ────────────────────────────────
+const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899"];
+
+function BalanceCard({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
+  const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
+  const balanceMap    = buildBalanceMap(accounts, transactions);
+  const total         = computeTotalBalance(accounts, transactions);
+  const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+  const chartData = nonCcAccounts.map((a, i) => ({
+    name:    a.name,
+    balance: balanceMap.get(a.id) ?? 0,
+    color:   ACCOUNT_COLORS[i % ACCOUNT_COLORS.length],
+  }));
+
+  return (
+    <BaseCard className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none">
+      {/* Header row */}
+      <div className="flex justify-between items-start">
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Total</p>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
+          <Wallet size={17} />
+        </div>
+      </div>
+
+      {/* Big value */}
+      <div>
+        <h2 className={`text-2xl font-black tracking-tight ${total >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
+          {fmt(total)}
+        </h2>
+        <p className="text-xs text-zinc-400 font-medium mt-0.5">
+          {nonCcAccounts.length} conta{nonCcAccounts.length !== 1 ? "s" : ""} ativa{nonCcAccounts.length !== 1 ? "s" : ""}
+        </p>
+      </div>
+
+      {/* Mini per-account bar chart */}
+      {chartData.length > 0 && (
+        <div className="space-y-1.5 pt-1">
+          {chartData.map(d => {
+            const pct = total > 0 ? Math.max((d.balance / total) * 100, 0) : 0;
+            return (
+              <div key={d.name}>
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[60%]">{d.name}</span>
+                  <span className="text-[10px] font-black text-zinc-700">{fmt(d.balance)}</span>
+                </div>
+                <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, backgroundColor: d.color }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </BaseCard>
+  );
+}
+
 // ─── Recent Transaction Row ──────────────────────────────────────────────────
 function RecentTxRow({
   tx,
@@ -134,26 +196,61 @@ function RecentTxRow({
   );
 }
 
-// ─── Mini Card Strip ──────────────────────────────────────────────────────────
-function MiniCard({ account }: { account: Account }) {
-  const colors = ["#18181b", "#10b981", "#6366f1", "#f59e0b", "#ef4444"];
-  const color = colors[account.id % colors.length];
+// ─── Mini Card: regular account ─────────────────────────────────────────────
+const ACCT_COLORS = ["#10b981", "#6366f1", "#3b82f6", "#f59e0b", "#ef4444"];
+
+function AccountMiniCard({ account, computedBalance }: { account: Account; computedBalance: number }) {
+  const color = ACCT_COLORS[account.id % ACCT_COLORS.length];
+  const typeLabel = {
+    CHECKING: "Conta Corrente", CASH: "Dinheiro", INVESTMENT: "Investimento",
+  }[account.type.trim()] ?? "Conta";
   return (
     <div
-      className="relative flex-shrink-0 w-48 h-28 rounded-2xl p-4 text-white overflow-hidden shadow-md"
+      className="relative flex-shrink-0 w-52 rounded-2xl p-4 text-white overflow-hidden shadow-md"
       style={{ background: color }}
     >
-      <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
-      <p className="text-[10px] font-black uppercase tracking-wider opacity-70">
-        {account.type.trim() === AccountType.CREDIT_CARD ? "Crédito" : "Conta"}
-      </p>
-      <p className="text-sm font-bold mt-1 truncate">{account.name}</p>
-      <p className="text-lg font-black mt-2">
-        R$ {Number(account.currentBalance).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+      <div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/10" />
+      <p className="text-[9px] font-black uppercase tracking-widest opacity-60">{typeLabel}</p>
+      <p className="text-sm font-bold mt-0.5 truncate">{account.name}</p>
+      <p className="text-[9px] font-bold opacity-50 mt-3 uppercase tracking-widest">Saldo disponível</p>
+      <p className="text-xl font-black mt-0.5">
+        R$ {computedBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
       </p>
     </div>
   );
 }
+
+// ─── Mini Card: credit card ───────────────────────────────────────────────────
+function CreditMiniCard({ account, statementAmount }: { account: Account; statementAmount: number | null }) {
+  return (
+    <div className="relative flex-shrink-0 w-52 rounded-2xl p-4 bg-zinc-900 text-white overflow-hidden shadow-md">
+      <div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/5" />
+      <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Cartão de Crédito</p>
+      <p className="text-sm font-bold mt-0.5 truncate">{account.name}</p>
+      {statementAmount !== null ? (
+        <>
+          <p className="text-[9px] font-bold opacity-40 mt-3 uppercase tracking-widest">Fatura aberta</p>
+          <p className="text-xl font-black mt-0.5 text-emerald-400">
+            R$ {statementAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-[9px] font-bold opacity-40 mt-3 uppercase tracking-widest">Fatura</p>
+          <p className="text-sm font-bold mt-0.5 opacity-50">Sem fatura aberta</p>
+        </>
+      )}
+      <div className="mt-2 flex items-center gap-1">
+        {account.closingDay && (
+          <span className="text-[9px] bg-white/10 rounded-full px-2 py-0.5 font-bold">
+            Fecha dia {account.closingDay}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 // ─── Custom Donut Label ───────────────────────────────────────────────────────
 const renderDonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -218,11 +315,12 @@ export default function DashboardHome() {
     return transactions.filter(tx => { const d = parseISO(tx.date); return d >= s && d <= e; });
   }, [transactions]);
 
-  const totalBalance = accounts.reduce((s, a) => {
-    const t = a.type.trim();
-    // credit card balance reduces total (it's a liability)
-    return t === AccountType.CREDIT_CARD ? s - Number(a.currentBalance) : s + Number(a.currentBalance);
-  }, 0);
+  const [accountTab, setAccountTab] = useState<"contas" | "credito">("contas");
+
+  const nonCcAccounts = useMemo(() => accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD), [accounts]);
+  const ccAccounts     = useMemo(() => accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD), [accounts]);
+  const balanceMap     = useMemo(() => buildBalanceMap(accounts, transactions), [accounts, transactions]);
+  const totalBalance   = useMemo(() => computeTotalBalance(accounts, transactions), [accounts, transactions]);
 
   const monthIncome  = thisMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
   const monthExpense = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
@@ -252,13 +350,7 @@ export default function DashboardHome() {
 
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
-          title="Saldo Total"
-          value={fmt(totalBalance)}
-          subtitle={`${accounts.length} conta${accounts.length !== 1 ? "s" : ""} ativa${accounts.length !== 1 ? "s" : ""}`}
-          icon={Wallet}
-          positive={totalBalance >= 0}
-        />
+        <BalanceCard accounts={accounts} transactions={transactions} />
         <KpiCard
           title="Receitas do Mês"
           value={fmt(monthIncome)}
@@ -411,14 +503,60 @@ export default function DashboardHome() {
             </BaseCard>
           )}
 
-          {/* Accounts Mini Strip */}
+          {/* ─── Suas Contas ─── */}
           <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
-            <div className="flex justify-between items-center mb-4">
+            {/* Header + tabs */}
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-zinc-900">Suas Contas</h3>
-              <a href="/account" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
+              <div className="flex items-center gap-4">
+                <div className="flex bg-zinc-100 rounded-full p-0.5 gap-0.5">
+                  {(["contas", "credito"] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setAccountTab(tab)}
+                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
+                        accountTab === tab
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-600"
+                      }`}
+                    >
+                      {tab === "contas" ? `Contas (${nonCcAccounts.length})` : `Crédito (${ccAccounts.length})`}
+                    </button>
+                  ))}
+                </div>
+                <a href="/account" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
+              </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-              {accounts.map(acc => <MiniCard key={acc.id} account={acc} />)}
+
+            {/* Cards strip */}
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+              {accountTab === "contas" ? (
+                nonCcAccounts.length > 0 ? nonCcAccounts.map(acc => (
+                  <AccountMiniCard
+                    key={acc.id}
+                    account={acc}
+                    computedBalance={balanceMap.get(acc.id) ?? 0}
+                  />
+                )) : (
+                  <p className="text-xs text-zinc-400 font-medium py-4">Nenhuma conta bancária cadastrada.</p>
+                )
+              ) : (
+                ccAccounts.length > 0 ? ccAccounts.map(acc => {
+                  const openStmt = statements.find(
+                    s => s.accountId === acc.id &&
+                    (s.status.trim() === "OPEN" || s.status.trim() === "CLOSED")
+                  );
+                  return (
+                    <CreditMiniCard
+                      key={acc.id}
+                      account={acc}
+                      statementAmount={openStmt ? Number(openStmt.totalAmount) : null}
+                    />
+                  );
+                }) : (
+                  <p className="text-xs text-zinc-400 font-medium py-4">Nenhum cartão de crédito cadastrado.</p>
+                )
+              )}
             </div>
           </BaseCard>
         </div>

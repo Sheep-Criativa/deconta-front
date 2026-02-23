@@ -13,6 +13,7 @@ interface AccountCardProps {
   account: Account;
   onEdit: (account: Account) => void;
   onDelete: (id: number) => void;
+  computedBalance?: number;
 }
 
 const typeIcons = {
@@ -29,8 +30,9 @@ const typeLabels = {
   [AccountType.INVESTMENT]: "Investimento",
 };
 
-export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
-  const Icon = typeIcons[account.type] || Building;
+export function AccountCard({ account, onEdit, onDelete, computedBalance }: AccountCardProps) {
+  const Icon    = typeIcons[account.type.trim() as AccountType] ?? Building;
+  const balance = computedBalance ?? account.currentBalance;
 
   return (
     <BaseCard className="relative group hover:shadow-lg transition-shadow">
@@ -66,8 +68,8 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
 
       <div>
         <p className="text-sm text-zinc-500 mb-1">Saldo Atual</p>
-        <p className={`text-2xl font-bold ${account.currentBalance < 0 ? "text-red-600" : "text-emerald-600"}`}>
-          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: account.currencyCode.trim() }).format(account.currentBalance)}
+        <p className={`text-2xl font-bold ${balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
+          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: account.currencyCode.trim() }).format(balance)}
         </p>
       </div>
       
