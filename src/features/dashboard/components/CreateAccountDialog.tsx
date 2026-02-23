@@ -25,25 +25,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createAccount, AccountType } from "../services/account.service";
+import { type Account, createAccount, updateAccount, AccountType } from "../services/account.service";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+// ─── Schema ──────────────────────────────────────────────────────────────────
 const formSchema = z.object({
-  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres").max(100),
-  type: z.nativeEnum(AccountType),
-  initialBalance: z.coerce.number().min(0, "O saldo não pode ser negativo"),
-  currencyCode: z.string().length(3, "Código da moeda deve ter 3 caracteres").default("BRL"),
-  closingDay: z.string().optional(),
-  dueDay: z.string().optional(), // Using string for date input consistency
-  limitAmount: z.coerce.number().optional(),
+  name:           z.string().min(2, "O nome deve ter pelo menos 2 caracteres").max(100),
+  type:           z.nativeEnum(AccountType),
+  initialBalance: z.coerce.number(),                         // only used on create
+  currencyCode:   z.string().length(3, "Código da moeda deve ter 3 caracteres").default("BRL"),
+  closingDay:     z.string().optional(),
+  dueDay:         z.string().optional(),
+  limitAmount:    z.coerce.number().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface CreateAccountDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  defaultType?: AccountType;
+  open:           boolean;
+  onOpenChange:   (open: boolean) => void;
+  onSuccess:      () => void;
+  defaultType?:   AccountType;
+  editingAccount?: Account | null;   // when provided → edit mode
 }
 
 export function CreateAccountDialog({
@@ -51,85 +56,108 @@ export function CreateAccountDialog({
   onOpenChange,
   onSuccess,
   defaultType,
+  editingAccount,
 }: CreateAccountDialogProps) {
-  const { user } = useAuth();
+  const { user }     = useAuth();
+  const isEditing    = !!editingAccount;
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<FormValues, unknown, FormValues>({
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
-      name: "",
-      type: defaultType ?? AccountType.CHECKING,
+      name:           "",
+      type:           defaultType ?? AccountType.CHECKING,
       initialBalance: 0,
-      currencyCode: "BRL",
-      closingDay: "",
-      dueDay: "",
-      limitAmount: 0,
+      currencyCode:   "BRL",
+      closingDay:     "",
+      dueDay:         "",
+      limitAmount:    0,
     },
   });
 
-  // Reset form with correct type when dialog opens
+  // Pre-fill form when editing, reset when creating
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+
+    if (editingAccount) {
       form.reset({
-        name: "",
-        type: defaultType ?? AccountType.CHECKING,
+        name:           editingAccount.name,
+        type:           editingAccount.type.trim() as AccountType,
+        initialBalance: Number(editingAccount.initialBalance),
+        currencyCode:   editingAccount.currencyCode.trim(),
+        closingDay:     editingAccount.closingDay?.toString() ?? "",
+        dueDay:         editingAccount.dueDay
+                          ? editingAccount.dueDay.split("T")[0]   // ISO → "YYYY-MM-DD"
+                          : "",
+        limitAmount:    editingAccount.limitAmount ? Number(editingAccount.limitAmount) : 0,
+      });
+    } else {
+      form.reset({
+        name:           "",
+        type:           defaultType ?? AccountType.CHECKING,
         initialBalance: 0,
-        currencyCode: "BRL",
-        closingDay: "",
-        dueDay: "",
-        limitAmount: 0,
+        currencyCode:   "BRL",
+        closingDay:     "",
+        dueDay:         "",
+        limitAmount:    0,
       });
     }
-  }, [open, defaultType]);
+  }, [open, editingAccount, defaultType]);
 
   const accountType = form.watch("type");
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     if (!user) return;
-
     setLoading(true);
+
     try {
-      if (values.type === AccountType.CREDIT_CARD) {
+      if (isEditing && editingAccount) {
+        // ── EDIT MODE: only send fields that can be safely edited ──
         const payload: any = {
-          userId: user.id,
-          name: values.name,
-          type: values.type,
-          initialBalance: values.initialBalance,
-          currentBalance: values.initialBalance,
+          userId:       user.id,
+          name:         values.name,
+          type:         values.type,
           currencyCode: values.currencyCode,
-          isActive: true,
-          closingDay: values.closingDay ?? null,
-          limitAmount: values.limitAmount ?? null,
+          isActive:     editingAccount.isActive,
+          // initialBalance intentionally NOT sent on edit
         };
 
-        // dueDay comes as "YYYY-MM-DD" string from input, must be a Date for backend
-        if (values.dueDay) {
-          // Add time to avoid timezone shift (treat as local noon)
-          payload.dueDay = new Date(values.dueDay + "T12:00:00");
+        if (values.type === AccountType.CREDIT_CARD) {
+          payload.closingDay  = values.closingDay || null;
+          payload.limitAmount = values.limitAmount ?? null;
+          if (values.dueDay) payload.dueDay = new Date(values.dueDay + "T12:00:00");
+        }
+
+        await updateAccount(editingAccount.id, payload);
+        toast.success("Conta atualizada!");
+      } else {
+        // ── CREATE MODE ──
+        const payload: any = {
+          userId:         user.id,
+          name:           values.name,
+          type:           values.type,
+          initialBalance: values.initialBalance,
+          currentBalance: values.initialBalance,
+          currencyCode:   values.currencyCode,
+          isActive:       true,
+        };
+
+        if (values.type === AccountType.CREDIT_CARD) {
+          payload.closingDay  = values.closingDay || null;
+          payload.limitAmount = values.limitAmount ?? null;
+          if (values.dueDay) payload.dueDay = new Date(values.dueDay + "T12:00:00");
         }
 
         await createAccount(payload);
-      } else {
-        const payload: any = {
-          userId: user.id,
-          name: values.name,
-          type: values.type,
-          initialBalance: values.initialBalance,
-          currentBalance: values.initialBalance,
-          currencyCode: values.currencyCode,
-          isActive: true,
-        };
-        await createAccount(payload);
+        toast.success("Conta criada com sucesso!");
       }
 
       form.reset();
-      toast.success("Conta criada com sucesso!");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to create account", error);
-      toast.error("Erro ao criar conta. Tente novamente.");
+      console.error("Failed to save account", error);
+      toast.error(`Erro ao ${isEditing ? "atualizar" : "criar"} conta. Tente novamente.`);
     } finally {
       setLoading(false);
     }
@@ -139,11 +167,20 @@ export function CreateAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-white rounded-3xl border-none shadow-2xl p-8">
         <DialogHeader className="mb-4">
-          <DialogTitle className="text-2xl font-semibold text-zinc-900">Nova Conta</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-zinc-900">
+            {isEditing ? "Editar Conta" : "Nova Conta"}
+          </DialogTitle>
+          {isEditing && (
+            <p className="text-sm text-zinc-400 mt-1">
+              O saldo é calculado automaticamente pelas transações.
+            </p>
+          )}
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+
+            {/* Name */}
             <FormField
               control={form.control}
               name="name"
@@ -151,10 +188,10 @@ export function CreateAccountDialog({
                 <FormItem className="space-y-1">
                   <FormLabel className="text-sm font-semibold text-zinc-800">Nome da Conta</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Ex: NuBank, Carteira..." 
+                    <Input
+                      placeholder="Ex: NuBank, Carteira..."
                       className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage className="text-red-500" />
@@ -162,6 +199,7 @@ export function CreateAccountDialog({
               )}
             />
 
+            {/* Type — locked in edit mode to prevent data inconsistency */}
             <FormField
               control={form.control}
               name="type"
@@ -170,64 +208,72 @@ export function CreateAccountDialog({
                   <FormLabel className="text-sm font-semibold text-zinc-800">Tipo</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
+                    disabled={isEditing}
                   >
                     <FormControl>
-                      <SelectTrigger className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus:ring-emerald-500">
+                      <SelectTrigger className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed">
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-white border-zinc-200 rounded-xl shadow-lg">
-                      <SelectItem value={AccountType.CHECKING} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Conta Corrente</SelectItem>
+                      <SelectItem value={AccountType.CHECKING}    className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Conta Corrente</SelectItem>
                       <SelectItem value={AccountType.CREDIT_CARD} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Cartão de Crédito</SelectItem>
-                      <SelectItem value={AccountType.CASH} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Dinheiro</SelectItem>
-                      <SelectItem value={AccountType.INVESTMENT} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Investimento</SelectItem>
+                      <SelectItem value={AccountType.CASH}        className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Dinheiro</SelectItem>
+                      <SelectItem value={AccountType.INVESTMENT}  className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Investimento</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isEditing && (
+                    <p className="text-[11px] text-zinc-400">O tipo não pode ser alterado após a criação.</p>
+                  )}
                   <FormMessage className="text-red-500" />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="initialBalance"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-sm font-semibold text-zinc-800">Saldo Inicial</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500" />
-                  </FormItem>
-                )}
-              />
-               
-              <FormField
-                control={form.control}
-                name="currencyCode"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-sm font-semibold text-zinc-800">Moeda</FormLabel>
-                    <FormControl>
-                      <Input 
-                        maxLength={3} 
-                        className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500 uppercase"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-500" />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Saldo Inicial — only on create */}
+            {!isEditing && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="initialBalance"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-sm font-semibold text-zinc-800">Saldo Inicial</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
+                />
 
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-sm font-semibold text-zinc-800">Moeda</FormLabel>
+                      <FormControl>
+                        <Input
+                          maxLength={3}
+                          className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500 uppercase"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Credit card fields */}
             {accountType === AccountType.CREDIT_CARD && (
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
                 <FormField
@@ -237,13 +283,10 @@ export function CreateAccountDialog({
                     <FormItem className="space-y-1">
                       <FormLabel className="text-sm font-semibold text-zinc-800">Dia Fechamento</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="31" 
-                          placeholder="Ex: 5" 
+                        <Input
+                          type="number" min="1" max="31" placeholder="Ex: 5"
                           className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage className="text-red-500" />
@@ -258,17 +301,17 @@ export function CreateAccountDialog({
                     <FormItem className="space-y-1">
                       <FormLabel className="text-sm font-semibold text-zinc-800">Vencimento</FormLabel>
                       <FormControl>
-                         <Input 
-                            type="date" 
-                            className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
-                            {...field} 
-                         />
+                        <Input
+                          type="date"
+                          className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
-                 
+
                 <FormField
                   control={form.control}
                   name="limitAmount"
@@ -276,11 +319,10 @@ export function CreateAccountDialog({
                     <FormItem className="col-span-2 space-y-1">
                       <FormLabel className="text-sm font-semibold text-zinc-800">Limite do Cartão</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
+                        <Input
+                          type="number" step="0.01"
                           className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage className="text-red-500" />
@@ -291,12 +333,14 @@ export function CreateAccountDialog({
             )}
 
             <div className="flex justify-end pt-6">
-              <Button 
-                type="submit" 
-                disabled={loading} 
+              <Button
+                type="submit"
+                disabled={loading}
                 className="w-full h-11 rounded-lg bg-emerald-500 text-white text-base font-semibold shadow-xl shadow-emerald-500/20 hover:shadow-emerald-700/30 hover:bg-emerald-600 transition-all"
               >
-                {loading ? "Criando..." : "Criar Conta"}
+                {loading
+                  ? (isEditing ? "Salvando..." : "Criando...")
+                  : (isEditing ? "Salvar alterações" : "Criar Conta")}
               </Button>
             </div>
           </form>

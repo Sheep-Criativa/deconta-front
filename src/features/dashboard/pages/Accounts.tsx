@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { type Account, getAccounts, deleteAccount } from "../services/account.service";
+import { type Account, AccountType, getAccounts, deleteAccount } from "../services/account.service";
 import { getTransactions, type Transaction } from "../services/transaction.service";
 import { AccountCard } from "../components/AccountCard";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
@@ -38,7 +38,10 @@ export default function Accounts() {
     fetchData();
   }, [user]);
 
-  // Compute real balances from transactions
+  // Only non-credit-card accounts belong on this page
+  const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
+
+  // Compute real balances from transactions (for all accounts so lookup works)
   const balanceMap = buildBalanceMap(accounts, transactions);
 
   async function handleDelete(id: number) {
@@ -79,7 +82,7 @@ export default function Accounts() {
          </div>
       ) : (
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {accounts.map((account) => (
+            {nonCcAccounts.map((account) => (
                <AccountCard 
                   key={account.id} 
                   account={account}
@@ -89,9 +92,9 @@ export default function Accounts() {
                />
             ))}
             
-            {accounts.length === 0 && (
+            {nonCcAccounts.length === 0 && (
                <div className="col-span-full py-12 text-center text-zinc-500 bg-white rounded-2xl border border-dashed border-zinc-200">
-                  <p>Nenhuma conta cadastrada.</p>
+                  <p>Nenhuma conta bancária cadastrada.</p>
                </div>
             )}
          </div>
@@ -104,6 +107,7 @@ export default function Accounts() {
       />
       <CreateAccountDialog
         open={!!editingAccount}
+        editingAccount={editingAccount}
         onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
         onSuccess={() => { setEditingAccount(null); fetchData(); }}
       />
