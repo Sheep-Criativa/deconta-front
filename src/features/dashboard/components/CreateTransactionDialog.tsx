@@ -53,6 +53,10 @@ interface CreateTransactionDialogProps {
   onSuccess: () => void;
   defaultType?: TransactionType;
   transaction?: Transaction;
+  /** Pre-select (and lock) a specific account */
+  defaultAccountId?: number;
+  /** Show only credit-card accounts in the selector */
+  onlyCreditCards?: boolean;
 }
 
 export function CreateTransactionDialog({
@@ -61,6 +65,8 @@ export function CreateTransactionDialog({
   onSuccess,
   defaultType = "EXPENSE",
   transaction,
+  defaultAccountId,
+  onlyCreditCards = false,
 }: CreateTransactionDialogProps) {
   const isEditMode = !!transaction;
   const { user } = useAuth();
@@ -85,7 +91,8 @@ export function CreateTransactionDialog({
 
   const transactionType = form.watch("type");
   const accountId = form.watch("accountId");
-  const isCreditCard = selectedAccount?.type.trim() === AccountType.CREDIT_CARD;
+  // CC context: explicit account lock, onlyCreditCards filter, or selected account is CC
+  const isCreditCard = !!defaultAccountId || onlyCreditCards || selectedAccount?.type.trim() === AccountType.CREDIT_CARD;
 
   // Load select options
   useEffect(() => {
@@ -95,11 +102,16 @@ export function CreateTransactionDialog({
       getCategories(user.id),
       getResponsibles(user.id),
     ]).then(([accs, cats, resps]) => {
-      setAccounts(accs.filter(a => a.isActive));
+      const activeAccs = accs.filter(a => a.isActive);
+      setAccounts(
+        onlyCreditCards
+          ? activeAccs.filter(a => a.type.trim() === AccountType.CREDIT_CARD)
+          : activeAccs
+      );
       setCategories(cats);
       setResponsibles(resps.filter(r => r.isActive));
     });
-  }, [user, open]);
+  }, [user, open, onlyCreditCards]);
 
   // Track selected account object to detect CREDIT_CARD
   useEffect(() => {
@@ -131,11 +143,13 @@ export function CreateTransactionDialog({
           amount: 0,
           installmentTotal: 1,
           description: "",
+          // Pre-select the account if provided
+          ...(defaultAccountId ? { accountId: defaultAccountId } : {}),
         });
         setSelectedAccount(null);
       }
     }
-  }, [open, defaultType, transaction]);
+  }, [open, defaultType, transaction, defaultAccountId]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
@@ -209,49 +223,54 @@ export function CreateTransactionDialog({
       <DialogContent className="sm:max-w-[520px] bg-white rounded-3xl border-none shadow-2xl p-8" aria-describedby={undefined}>
         <DialogHeader className="mb-6">
           <DialogTitle className="text-2xl font-black text-zinc-900 tracking-tight">
-            {isEditMode ? "Editar Transação" : "Nova Transação"}
+            {isEditMode
+              ? "Editar Transação"
+              : isCreditCard
+                ? "Nova Despesa no Cartão"
+                : "Nova Transação"}
           </DialogTitle>
           {isCreditCard && (
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-xl border border-blue-100 mt-2">
-              <CreditCard size={14} />
-              Cartão de crédito detectado — parcelamento disponível
-            </div>
+            <p className="text-sm text-zinc-400 mt-1 font-medium">
+              💳 Parcelamento disponível logo abaixo.
+            </p>
           )}
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
-            {/* Type selector — pill style */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Tipo</FormLabel>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(Object.keys(typeConfig) as TransactionType[]).map(t => {
-                      const cfg = typeConfig[t];
-                      const Icon = cfg.icon;
-                      const active = field.value === t;
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => field.onChange(t)}
-                          className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 text-[10px] font-black uppercase tracking-wider transition-all ${
-                            active ? cfg.color + " border-current" : "border-zinc-100 text-zinc-400 hover:border-zinc-200 hover:text-zinc-600"
-                          }`}
-                        >
-                          <Icon size={18} />
-                          {cfg.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </FormItem>
-              )}
-            />
+            {/* Type selector — hidden in CC context (always EXPENSE) */}
+            {!isCreditCard && (
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Tipo</FormLabel>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(Object.keys(typeConfig) as TransactionType[]).map(t => {
+                        const cfg = typeConfig[t];
+                        const Icon = cfg.icon;
+                        const active = field.value === t;
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => field.onChange(t)}
+                            className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                              active ? cfg.color + " border-current" : "border-zinc-100 text-zinc-400 hover:border-zinc-200 hover:text-zinc-600"
+                            }`}
+                          >
+                            <Icon size={18} />
+                            {cfg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Amount */}
             <FormField
@@ -276,30 +295,43 @@ export function CreateTransactionDialog({
 
             {/* Account + Category row */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="accountId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Conta</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value?.toString()}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
-                        {accounts.map(acc => (
-                          <SelectItem key={acc.id} value={String(acc.id)} className="font-medium">
-                            {acc.type.trim() === AccountType.CREDIT_CARD ? "💳 " : "🏦 "}{acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Account — locked badge when defaultAccountId is set */}
+              {defaultAccountId ? (
+                <FormItem>
+                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Cartão</FormLabel>
+                  <div className="h-11 rounded-xl bg-zinc-900 text-white flex items-center px-3 gap-2 text-sm font-bold">
+                    <span>💳</span>
+                    <span className="truncate">
+                      {accounts.find(a => a.id === defaultAccountId)?.name ?? "Cartão"}
+                    </span>
+                  </div>
+                </FormItem>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="accountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Conta</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                          {accounts.map(acc => (
+                            <SelectItem key={acc.id} value={String(acc.id)} className="font-medium">
+                              {acc.type.trim() === AccountType.CREDIT_CARD ? "💳 " : "🏦 "}{acc.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

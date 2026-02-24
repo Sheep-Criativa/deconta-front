@@ -64,12 +64,12 @@ export default function Accounts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-           <h1 className="text-2xl font-bold text-zinc-900">Minhas Contas</h1>
-           <p className="text-zinc-500">Gerencie suas contas bancárias e cartões.</p>
+           <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Minhas Contas</h1>
+           <p className="text-zinc-400 text-sm font-medium mt-0.5">Gerencie suas contas bancárias e cartões.</p>
         </div>
          
-         <Button onClick={() => setIsCreateOpen(true)} className="bg-emerald-500 hover:bg-emerald-600">
-            <Plus className="mr-2 h-4 w-4" />
+         <Button onClick={() => setIsCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 px-6 shadow-lg shadow-emerald-600/20 font-bold transition-all active:scale-95">
+            <Plus className="mr-2 h-5 w-5" />
             Nova Conta
          </Button>
       </div>

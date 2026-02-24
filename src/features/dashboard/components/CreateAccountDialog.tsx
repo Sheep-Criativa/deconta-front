@@ -60,6 +60,8 @@ export function CreateAccountDialog({
 }: CreateAccountDialogProps) {
   const { user }     = useAuth();
   const isEditing    = !!editingAccount;
+  // A type is "fixed" when: editing (can't change), or created from CC screen
+  const isCreditCard = (editingAccount?.type.trim() ?? defaultType) === AccountType.CREDIT_CARD;
   const [loading, setLoading] = useState(false);
 
   const form = useForm<FormValues, unknown, FormValues>({
@@ -168,7 +170,9 @@ export function CreateAccountDialog({
       <DialogContent className="sm:max-w-[425px] bg-white rounded-3xl border-none shadow-2xl p-8">
         <DialogHeader className="mb-4">
           <DialogTitle className="text-2xl font-semibold text-zinc-900">
-            {isEditing ? "Editar Conta" : "Nova Conta"}
+          {isEditing
+            ? (isCreditCard ? "Editar Cartão" : "Editar Conta")
+            : (isCreditCard ? "Novo Cartão"   : "Nova Conta")}
           </DialogTitle>
           {isEditing && (
             <p className="text-sm text-zinc-400 mt-1">
@@ -199,40 +203,48 @@ export function CreateAccountDialog({
               )}
             />
 
-            {/* Type — locked in edit mode to prevent data inconsistency */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-sm font-semibold text-zinc-800">Tipo</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isEditing}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-white border-zinc-200 rounded-xl shadow-lg">
-                      <SelectItem value={AccountType.CHECKING}    className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Conta Corrente</SelectItem>
-                      <SelectItem value={AccountType.CREDIT_CARD} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Cartão de Crédito</SelectItem>
-                      <SelectItem value={AccountType.CASH}        className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Dinheiro</SelectItem>
-                      <SelectItem value={AccountType.INVESTMENT}  className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Investimento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {isEditing && (
-                    <p className="text-[11px] text-zinc-400">O tipo não pode ser alterado após a criação.</p>
-                  )}
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
+            {/* Type — fixed badge for CC, select for others */}
+            {isCreditCard ? (
+              <div className="flex items-center gap-2 py-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 text-white text-xs font-black">
+                  <span>💳</span> Cartão de Crédito
+                </span>
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-sm font-semibold text-zinc-800">Tipo</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isEditing}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white border-zinc-200 rounded-xl shadow-lg">
+                        <SelectItem value={AccountType.CHECKING}    className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Conta Corrente</SelectItem>
+                        <SelectItem value={AccountType.CREDIT_CARD} className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Cartão de Crédito</SelectItem>
+                        <SelectItem value={AccountType.CASH}        className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Dinheiro</SelectItem>
+                        <SelectItem value={AccountType.INVESTMENT}  className="focus:bg-emerald-50 focus:text-emerald-900 cursor-pointer">Investimento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {isEditing && (
+                      <p className="text-[11px] text-zinc-400">O tipo não pode ser alterado após a criação.</p>
+                    )}
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            )}
 
-            {/* Saldo Inicial — only on create */}
-            {!isEditing && (
+            {/* Saldo Inicial + Moeda — only on create AND only for non-CC accounts */}
+            {!isEditing && !isCreditCard && (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
