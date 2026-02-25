@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +8,20 @@ import { Card } from "@/components/ui/card";
 
 import { registerUser } from "../services/auth.service";
 import { AuthLayout } from "../components/AuthLayout";
+
+const registerSchema = z.object({
+  name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
+  email: z.string().email("Digite um e-mail válido"),
+  passwordHash: z
+    .string()
+    .min(6, "Senha deve ter no mínimo 6 caracteres")
+    .max(100)
+    .regex(/[A-Z]/, "Senha deve conter ao menos uma letra maiúscula")
+    .regex(/[a-z]/, "Senha deve conter ao menos uma letra minúscula")
+    .regex(/[0-9]/, "Senha deve conter ao menos um número")
+    .regex(/[^A-Za-z0-9]/, "Senha deve conter ao menos um caractere especial"),
+});
+
 
 const zodMessageMap: Record<string, (issue: any) => string> = {
   too_small: (issue) => {
@@ -35,6 +51,7 @@ const zodMessageMap: Record<string, (issue: any) => string> = {
 
 export default function Register() {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const navigate = useNavigate();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,10 +62,25 @@ export default function Register() {
     const email = formData.get("email") as string;
     const passwordHash = formData.get("passwordHash") as string;
 
+    const parseResult = registerSchema.safeParse({ name, email, passwordHash });
+    
+    if (!parseResult.success) {
+      const fieldErrors: Record<string, string> = {};
+      parseResult.error.issues.forEach((issue) => {
+        const field = issue.path[0];
+        if (field && !fieldErrors[field.toString()]) {
+          fieldErrors[field.toString()] = issue.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
     try {
       const data = { name, email, passwordHash };
       await registerUser(data);
       console.log("User registered successfully");
+      navigate("/login");
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as {
@@ -72,7 +104,7 @@ export default function Register() {
             if (!field || fieldErrors[field]) return;
 
             const customMessage =
-              zodMessageMap[issue.code]?.(issue) ?? "Campo inválido";
+              zodMessageMap[issue.code ?? ""]?.(issue) ?? issue.message ?? "Campo inválido";
 
             fieldErrors[field] = customMessage;
           });
