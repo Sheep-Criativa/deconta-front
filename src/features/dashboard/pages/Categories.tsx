@@ -62,13 +62,10 @@ export default function Categories() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-zinc-900 flex items-center gap-3">
-            <div className="p-2 bg-emerald-500 rounded-xl text-white">
-              <Tag size={24} />
-            </div>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">
             Categorias
           </h1>
-          <p className="text-zinc-500 mt-1">Organize suas movimentações por tipo e categoria.</p>
+          <p className="text-zinc-400 text-sm font-medium mt-0.5">Organize suas movimentações por tipo e categoria.</p>
         </div>
         
         <Button 
