@@ -61,6 +61,8 @@ interface CreateCategoryDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   categoryToEdit?: Category | null;
+  /** Pre-select type when opening from another form */
+  defaultType?: "INCOME" | "EXPENSE";
 }
 
 const PRESET_COLORS = [
@@ -74,6 +76,7 @@ export function CreateCategoryDialog({
   onOpenChange,
   onSuccess,
   categoryToEdit,
+  defaultType,
 }: CreateCategoryDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -102,7 +105,7 @@ export function CreateCategoryDialog({
           name:  "",
           icon:  "ShoppingCart",
           color: "#10b981",
-          type:  "EXPENSE",
+          type:  defaultType ?? "EXPENSE",
         });
       }
     }

@@ -16,11 +16,18 @@ import { getAccounts, type Account } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
+import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isToday, isYesterday, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const typeConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
@@ -75,7 +82,6 @@ function TransactionRow({
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const cfg = typeConfig[tx.type.trim()] ?? typeConfig.EXPENSE;
   const Icon = cfg.icon;
   const account  = accounts.find(a => a.id === tx.accountId);
@@ -85,13 +91,19 @@ function TransactionRow({
 
   return (
     <div className="flex items-center gap-4 p-4 hover:bg-zinc-50 rounded-2xl transition-colors group cursor-default relative">
-      {/* Icon */}
-      <div className={`w-10 h-10 rounded-xl ${cfg.bg} ${cfg.color} flex items-center justify-center flex-shrink-0`}>
-        {category?.icon ? (
-          <span className="text-lg">{category.icon}</span>
-        ) : (
-          <Icon size={18} />
-        )}
+      {/* Icon — resolve Lucide key, legacy emoji, or type icon */}
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.bg} ${cfg.color}`}
+        style={category?.color ? { backgroundColor: category.color, color: "#fff" } : {}}
+      >
+        {(() => {
+          if (category?.icon) {
+            const LucideIcon = ICON_MAP[category.icon];
+            if (LucideIcon) return <LucideIcon size={18} strokeWidth={1.75} />;
+            // legacy emoji fallback
+            return <span className="text-lg leading-none">{category.icon}</span>;
+          }
+          return <Icon size={18} />;
+        })()}
       </div>
 
       {/* Info */}
@@ -136,34 +148,29 @@ function TransactionRow({
       </div>
 
       {/* Actions menu */}
-      <div className="relative flex-shrink-0">
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100"
-        >
-          <MoreVertical size={15} />
-        </button>
-        {menuOpen && (
-          <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-zinc-100 py-1.5 w-36 overflow-hidden">
-              <button
-                onClick={() => { setMenuOpen(false); onEdit(tx); }}
-                className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 transition-colors"
-              >
-                <Pencil size={13} className="text-zinc-400" /> Editar
-              </button>
-              <button
-                onClick={() => { setMenuOpen(false); onDelete(tx); }}
-                className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
-              >
-                <Trash2 size={13} /> Excluir
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
+          >
+            <MoreVertical size={15} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-white rounded-2xl shadow-xl border border-zinc-100 py-1.5 w-36">
+          <DropdownMenuItem
+            onClick={() => onEdit(tx)}
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+          >
+            <Pencil size={13} className="text-zinc-400" /> Editar
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onDelete(tx)}
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+          >
+            <Trash2 size={13} /> Excluir
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -401,10 +408,7 @@ export default function Transactions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 rounded-xl text-white">
-              <List size={20} />
-            </div>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">
             Transações
           </h1>
           <p className="text-zinc-400 text-sm font-medium mt-0.5">

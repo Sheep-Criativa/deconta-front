@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, CreditCard,
-  ArrowUpRight, ArrowDownRight, Loader2, List,
+  ArrowUpRight, ArrowDownRight, Loader2, List, Tag,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,6 +16,7 @@ import { getAccounts, type Account, AccountType } from "../services/account.serv
 import { getTransactions, type Transaction } from "../services/transaction.service";
 import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
+import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { buildBalanceMap, computeTotalBalance } from "../utils/balanceUtils";
 
 // ─── Chart: Income vs Expense bar chart (last 6 months) ──────────────────────
@@ -176,12 +177,22 @@ function RecentTxRow({
   const acc = accounts.find(a => a.id === tx.accountId);
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-zinc-50 last:border-0">
+    <div className="flex items-center gap-3 py-3 border-b border-zinc-50 last:border-0 group cursor-default">
       <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-        style={{ backgroundColor: (cat?.color ?? "#f4f4f5") + "22" }}
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105"
+        style={{
+          backgroundColor: cat?.color || "#f4f4f5",
+          color: "#fff"
+        }}
       >
-        {cat?.icon ?? (isExpense ? "💸" : "💰")}
+        {(() => {
+          if (cat?.icon) {
+            const LucideIcon = ICON_MAP[cat.icon];
+            if (LucideIcon) return <LucideIcon size={18} strokeWidth={1.75} />;
+            return <span className="text-lg leading-none">{cat.icon}</span>;
+          }
+          return isExpense ? <Tag size={18} className="opacity-70" /> : <TrendingUp size={18} className="opacity-70" />;
+        })()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-zinc-800 truncate">

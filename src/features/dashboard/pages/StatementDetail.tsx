@@ -10,13 +10,16 @@ import {
   Loader2,
   ArrowDownRight,
   ArrowUpRight,
+  TrendingUp,
   TrendingDown,
+  Tag,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getStatements, updateStatementStatus, type Statement } from "../services/credit-card.service";
 import { getTransactions, type Transaction } from "../services/transaction.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getAccounts, type Account } from "../services/account.service";
+import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, parseISO, isWithinInterval } from "date-fns";
@@ -38,9 +41,22 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
   const dateStr   = format(parseISO(tx.date), "dd/MM/yyyy");
 
   return (
-    <div className="flex items-center gap-4 py-4 border-b border-zinc-50 last:border-0">
-      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-lg flex-shrink-0">
-        {category?.icon ?? (isExpense ? "💳" : "💰")}
+    <div className="flex items-center gap-4 py-4 border-b border-zinc-50 last:border-0 group cursor-default">
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105"
+        style={{
+          backgroundColor: category?.color || "#f4f4f5",
+          color: "#fff"
+        }}
+      >
+        {(() => {
+          if (category?.icon) {
+            const LucideIcon = ICON_MAP[category.icon];
+            if (LucideIcon) return <LucideIcon size={18} strokeWidth={1.75} />;
+            return <span className="text-lg leading-none">{category.icon}</span>;
+          }
+          return isExpense ? <Tag size={18} className="opacity-70" /> : <TrendingUp size={18} className="opacity-70" />;
+        })()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-zinc-800 truncate">{label}</p>

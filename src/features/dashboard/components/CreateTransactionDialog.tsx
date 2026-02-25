@@ -25,17 +25,19 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
-import { getCategories, type Category } from "../services/category.service";
+import { getCategories, createCategory, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { createTransaction, updateTransaction, type Transaction, type TransactionType, type TransactionStatus } from "../services/transaction.service";
+import { CreateCategoryDialog } from "./CreateCategoryDialog";
+import { CreateResponsibleDialog } from "./CreateResponsibleDialog";
 import { toast } from "sonner";
 
 const formSchema = z.object({
   accountId: z.coerce.number().min(1, "Selecione uma conta"),
-  categoryId: z.coerce.number().min(1, "Selecione uma categoria"),
+  categoryId: z.coerce.number().min(0), // 0 = Sem categoria (mapped to default on submit)
   responsibleId: z.coerce.number().min(1, "Selecione um responsável"),
   description: z.string().max(250).optional(),
   amount: z.coerce.number().min(0.01, "Valor deve ser maior que zero"),
@@ -75,6 +77,8 @@ export function CreateTransactionDialog({
   const [categories, setCategories] = useState<Category[]>([]);
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
+  const [isRespDialogOpen, setIsRespDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
@@ -109,7 +113,17 @@ export function CreateTransactionDialog({
           : activeAccs
       );
       setCategories(cats);
-      setResponsibles(resps.filter(r => r.isActive));
+      const activeResps = resps.filter(r => r.isActive);
+      setResponsibles(activeResps);
+      // Auto-select: prefer the responsible whose name matches the logged-in user,
+      // otherwise fall back to the first one.
+      if (!transaction && activeResps.length > 0) {
+        const userName = user.name?.trim().toLowerCase() ?? "";
+        const selfResp = activeResps.find(
+          r => r.name.trim().toLowerCase() === userName
+        ) ?? activeResps[0];
+        form.setValue("responsibleId", selfResp.id);
+      }
     });
   }, [user, open, onlyCreditCards]);
 
@@ -155,12 +169,34 @@ export function CreateTransactionDialog({
     if (!user) return;
     setLoading(true);
     try {
+      // Resolve "Sem categoria" → find or create a "Geral" default category
+      let resolvedCategoryId = values.categoryId;
+      if (!resolvedCategoryId || resolvedCategoryId === 0) {
+        const catType = (values.type === "INCOME") ? "INCOME" : "EXPENSE";
+        const existing = categories.find(
+          c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType
+        );
+        if (existing) {
+          resolvedCategoryId = existing.id;
+        } else {
+          const created = await createCategory({
+            userId: user.id,
+            name: "Geral",
+            icon: "Tag",
+            color: "#64748b",
+            type: catType,
+          });
+          resolvedCategoryId = created.id;
+          setCategories(prev => [...prev, created]);
+        }
+      }
+
       const baseDate = new Date(values.date + "T12:00:00");
       const basePaymentDate = new Date(values.paymentDate + "T12:00:00");
 
       if (isEditMode && transaction) {
         await updateTransaction(transaction.id, {
-          categoryId: values.categoryId,
+          categoryId: resolvedCategoryId,
           responsibleId: values.responsibleId,
           description: values.description || undefined,
           amount: values.amount,
@@ -174,7 +210,7 @@ export function CreateTransactionDialog({
         await createTransaction({
           userId: user.id,
           accountId: values.accountId,
-          categoryId: values.categoryId,
+          categoryId: resolvedCategoryId,
           responsibleId: values.responsibleId,
           description: values.description || undefined,
           amount: values.amount,
@@ -219,6 +255,7 @@ export function CreateTransactionDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px] bg-white rounded-3xl border-none shadow-2xl p-8" aria-describedby={undefined}>
         <DialogHeader className="mb-6">
@@ -339,20 +376,44 @@ export function CreateTransactionDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value?.toString()}
+                    >
                       <FormControl>
                         <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                        {/* Sem categoria option */}
+                        <SelectItem value="0" className="font-medium text-zinc-400">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block" />
+                            Sem categoria
+                          </span>
+                        </SelectItem>
                         {filteredCategories.map(cat => (
                           <SelectItem key={cat.id} value={String(cat.id)} className="font-medium">
-                            {cat.icon} {cat.name}
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                                style={{ backgroundColor: cat.color || "#64748b" }}
+                              />
+                              {cat.name}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Inline category creation */}
+                    <button
+                      type="button"
+                      onClick={() => setIsCatDialogOpen(true)}
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 mt-1 transition-colors"
+                    >
+                      <Plus size={11} /> Nova categoria
+                    </button>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -386,6 +447,14 @@ export function CreateTransactionDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {/* Inline responsible creation */}
+                  <button
+                    type="button"
+                    onClick={() => setIsRespDialogOpen(true)}
+                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 mt-1 transition-colors"
+                  >
+                    <Plus size={11} /> Novo responsável
+                  </button>
                   <FormMessage />
                 </FormItem>
               )}
@@ -533,5 +602,38 @@ export function CreateTransactionDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Inline category creation — opens on top of the transaction dialog */}
+    <CreateCategoryDialog
+      open={isCatDialogOpen}
+      onOpenChange={setIsCatDialogOpen}
+      defaultType={transactionType === "INCOME" ? "INCOME" : "EXPENSE"}
+      onSuccess={async () => {
+        if (!user) return;
+        const cats = await getCategories(user.id);
+        setCategories(cats);
+        // Auto-select the newest category of the right type
+        const matching = cats
+          .filter(c => c.type.trim() === (transactionType === "INCOME" ? "INCOME" : "EXPENSE"))
+          .at(-1);
+        if (matching) form.setValue("categoryId", matching.id);
+      }}
+    />
+
+    {/* Inline responsible creation */}
+    <CreateResponsibleDialog
+      open={isRespDialogOpen}
+      onOpenChange={setIsRespDialogOpen}
+      onSuccess={async () => {
+        if (!user) return;
+        const resps = await getResponsibles(user.id);
+        const active = resps.filter(r => r.isActive);
+        setResponsibles(active);
+        // Auto-select the newest responsible
+        const newest = active.at(-1);
+        if (newest) form.setValue("responsibleId", newest.id);
+      }}
+    />
+    </>
   );
 }

@@ -19,6 +19,7 @@ import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
+import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -141,8 +142,18 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
 
   return (
     <div className="flex items-center py-4 border-b border-zinc-50 last:border-0 group">
-      <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center mr-3 text-lg flex-shrink-0">
-        {category?.icon ?? (isExpense ? "💳" : "💰")}
+      <div
+        className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center mr-3 flex-shrink-0"
+        style={category?.color ? { backgroundColor: category.color, color: "#fff" } : {}}
+      >
+        {(() => {
+          if (category?.icon) {
+            const LucideIcon = ICON_MAP[category.icon];
+            if (LucideIcon) return <LucideIcon size={16} strokeWidth={2} />;
+            return <p className="text-lg leading-none">{category.icon}</p>;
+          }
+          return isExpense ? <CreditCard size={16} /> : <p className="text-lg leading-none">💰</p>;
+        })()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-zinc-800 truncate">{label}</p>
