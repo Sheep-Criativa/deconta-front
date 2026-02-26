@@ -18,6 +18,7 @@ import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { buildBalanceMap, computeTotalBalance } from "../utils/balanceUtils";
+import { OnboardingTour } from "../components/OnboardingTour";
 
 // ─── Chart: Income vs Expense bar chart (last 6 months) ──────────────────────
 function buildMonthlyFlow(transactions: Transaction[]) {
@@ -38,7 +39,7 @@ function buildMonthlyFlow(transactions: Transaction[]) {
 }
 
 // ─── Chart: Spending by category (donut) ─────────────────────────────────────
-function buildCategoryData(transactions: Transaction[], categories: { id: number; name: string; color: string | null }[]) {
+function buildCategoryData(transactions: Transaction[], categories: { id: number; name: string; color?: string | null }[]) {
   const map: Record<number, { name: string; color: string; value: number }> = {};
   transactions
     .filter(tx => tx.type.trim() === "EXPENSE" && tx.categoryId)
@@ -117,7 +118,7 @@ function BalanceCard({ accounts, transactions }: { accounts: Account[]; transact
   }));
 
   return (
-    <BaseCard className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none">
+    <BaseCard id="tour-dashboard-balance" className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none">
       {/* Header row */}
       <div className="flex justify-between items-start">
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Total</p>
@@ -170,7 +171,7 @@ function RecentTxRow({
 }: {
   tx: Transaction;
   accounts: Account[];
-  categories: { id: number; name: string; icon: string | null; color: string | null }[];
+  categories: { id: number; name: string; icon?: string | null; color?: string | null }[];
 }) {
   const isExpense = tx.type.trim() === "EXPENSE";
   const cat = categories.find(c => c.id === tx.categoryId);
@@ -283,7 +284,7 @@ export default function DashboardHome() {
   const [accounts,     setAccounts]     = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [statements,   setStatements]   = useState<Statement[]>([]);
-  const [categories,   setCategories]   = useState<{ id: number; name: string; icon: string | null; color: string | null }[]>([]);
+  const [categories,   setCategories]   = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
@@ -358,7 +359,8 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
+      <OnboardingTour />
+      
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <BalanceCard accounts={accounts} transactions={transactions} />
@@ -387,7 +389,7 @@ export default function DashboardHome() {
         <div className="lg:col-span-8 space-y-6">
 
           {/* Area/Bar Chart: Income vs Expense */}
-          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
+          <BaseCard id="tour-dashboard-flow" className="rounded-3xl border border-zinc-100 shadow-none">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-sm font-black text-zinc-900">Fluxo de Caixa</h3>
@@ -408,7 +410,7 @@ export default function DashboardHome() {
           </BaseCard>
 
           {/* Recent Transactions */}
-          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
+          <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
