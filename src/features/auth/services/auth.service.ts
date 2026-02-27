@@ -16,6 +16,11 @@ export async function loginUser(email: string, passwordHash: string) {
   return response.data;
 }
 
+export async function loginWithGoogleBackend(token: string) {
+  const response = await api.post('/auth/google', { token });
+  return response.data;
+}
+
 export interface User {
   id: number;
   name: string;

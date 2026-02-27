@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
+import { GoogleLogin } from '@react-oauth/google';
+
 import { registerUser } from "../services/auth.service";
 import { AuthLayout } from "../components/AuthLayout";
+import { useAuth } from "@/hooks/useAuth";
 
 const registerSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
@@ -51,7 +54,10 @@ const zodMessageMap: Record<string, (issue: any) => string> = {
 
 export default function Register() {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { loginWithGoogle } = useAuth();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,12 +82,16 @@ export default function Register() {
       return;
     }
 
+    setLoading(true);
+    setFormError(null);
+
     try {
       const data = { name, email, passwordHash };
       await registerUser(data);
       console.log("User registered successfully");
       navigate("/login");
     } catch (error: unknown) {
+      setLoading(false);
       if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as {
           response?: {
@@ -184,12 +194,17 @@ export default function Register() {
               )}
             </div>
 
+            {formError && (
+              <p className="text-sm text-red-600 text-center">{formError}</p>
+            )}
+
             <Button
               type="submit"
+              disabled={loading}
               className="w-full h-11 rounded-lg bg-emerald-500 text-white text-base font-semibold
                 shadow-xl shadow-emerald-500/20 hover:shadow-emerald-700/30 transition"
             >
-              Comece Agora
+              {loading ? "Criando..." : "Comece Agora"}
             </Button>
           </form>
 
@@ -197,10 +212,27 @@ export default function Register() {
           <div className="mt-8 text-center">
             <p className="text-sm text-zinc-500 mb-4">Ou continue com:</p>
 
-            <div className="flex justify-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
+            <div className="flex justify-center">
+               <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      setLoading(true);
+                      setFormError(null);
+                      try {
+                        await loginWithGoogle(credentialResponse.credential);
+                      } catch (err: any) {
+                        setFormError("Falha na autenticação via Google");
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                  onError={() => {
+                    setFormError("Falha na autenticação via Google");
+                  }}
+                  shape="rectangular"
+                  theme="outline"
+                  size="large"
+                />
             </div>
           </div>
 
