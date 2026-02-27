@@ -1,4 +1,4 @@
-import { CreditCard as CardIcon, Wifi } from "lucide-react";
+import { Wifi } from "lucide-react";
 
 interface CreditCardVisualProps {
   name: string;

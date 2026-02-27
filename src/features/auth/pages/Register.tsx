@@ -99,6 +99,7 @@ export default function Register() {
               issues?: {
                 path: string[];
                 message: string;
+                code?: string;
               }[];
             };
           };

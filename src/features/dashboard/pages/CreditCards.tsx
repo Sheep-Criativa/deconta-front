@@ -152,7 +152,7 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
             if (LucideIcon) return <LucideIcon size={16} strokeWidth={2} />;
             return <p className="text-lg leading-none">{category.icon}</p>;
           }
-          return isExpense ? <CreditCard size={16} /> : <p className="text-lg leading-none">💰</p>;
+          return isExpense ? <CardIcon size={16} /> : <p className="text-lg leading-none">💰</p>;
         })()}
       </div>
       <div className="flex-1 min-w-0">
@@ -210,10 +210,9 @@ interface OverviewPanelProps {
   responsibles: Responsible[];
   categories:   Category[];
   navigate:     (path: string, opts?: any) => void;
-  cards_map:    Record<number, Account>;
 }
 
-function OverviewPanel({ cards, allStmts, allTxs, responsibles, categories, navigate, cards_map }: OverviewPanelProps) {
+function OverviewPanel({ cards, allStmts, allTxs, responsibles, categories, navigate }: OverviewPanelProps) {
   const [filterRespId, setFilterRespId] = useState<number | null>(null);
 
   // ── Aggregates ──
@@ -446,7 +445,6 @@ export default function CreditCards() {
   const [isNewTxOpen, setIsNewTxOpen]   = useState(false);
 
   const selectedCard = cards.find(c => c.id === selectedCardId);
-  const cardsMap     = useMemo(() => Object.fromEntries(cards.map(c => [c.id, c])), [cards]);
 
   // ── Load all cards + meta ──
   const loadCards = async () => {
@@ -569,7 +567,6 @@ export default function CreditCards() {
           responsibles={responsibles}
           categories={categories}
           navigate={navigate}
-          cards_map={cardsMap}
         />
 
       ) : (

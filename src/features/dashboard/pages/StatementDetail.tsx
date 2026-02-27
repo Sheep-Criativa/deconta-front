@@ -206,7 +206,6 @@ export default function StatementDetail() {
 
   const normalizedStatus = statement.status?.trim() as keyof typeof statusConfig;
   const cfg = statusConfig[normalizedStatus] ?? statusConfig.OPEN;
-  const StatusIcon = cfg.icon;
   const canPay = statement.status?.trim() !== "PAID";
 
   return (
