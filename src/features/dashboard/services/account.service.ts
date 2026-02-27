@@ -1,11 +1,13 @@
 import api from "@/services/api";
 
-export enum AccountType {
-  CHECKING = "CHECKING",
-  CREDIT_CARD = "CREDIT_CARD",
-  CASH = "CASH",
-  INVESTMENT = "INVESTMENT",
-}
+export const AccountType = {
+  CHECKING: "CHECKING",
+  CREDIT_CARD: "CREDIT_CARD",
+  CASH: "CASH",
+  INVESTMENT: "INVESTMENT",
+} as const;
+
+export type AccountType = typeof AccountType[keyof typeof AccountType];
 
 export interface Account {
   id: number;

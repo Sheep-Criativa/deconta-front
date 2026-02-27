@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Tag } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, createCategory, type Category } from "../services/category.service";

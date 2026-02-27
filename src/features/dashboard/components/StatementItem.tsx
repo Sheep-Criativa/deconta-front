@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Lock, CreditCard } from "lucide-react";
+import { CheckCircle2, Clock, Lock } from "lucide-react";
 import type { Statement } from "../services/credit-card.service";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";

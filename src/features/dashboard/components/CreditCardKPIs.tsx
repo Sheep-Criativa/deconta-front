@@ -1,4 +1,4 @@
-import { ArrowUpCircle, Calendar, ShieldCheck, AlertCircle } from "lucide-react";
+import { Calendar, ShieldCheck, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface KPIProps {

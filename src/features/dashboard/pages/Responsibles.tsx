@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { type Responsible, getResponsibles, deleteResponsible } from "../services/responsible.service";

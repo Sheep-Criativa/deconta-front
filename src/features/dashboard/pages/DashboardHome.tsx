@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AreaChart, Area,
   BarChart, Bar,
   PieChart, Pie, Cell, Tooltip as RechartTooltip, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Legend,
@@ -332,7 +331,6 @@ export default function DashboardHome() {
   const nonCcAccounts = useMemo(() => accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD), [accounts]);
   const ccAccounts     = useMemo(() => accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD), [accounts]);
   const balanceMap     = useMemo(() => buildBalanceMap(accounts, transactions), [accounts, transactions]);
-  const totalBalance   = useMemo(() => computeTotalBalance(accounts, transactions), [accounts, transactions]);
 
   const monthIncome  = thisMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
   const monthExpense = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
