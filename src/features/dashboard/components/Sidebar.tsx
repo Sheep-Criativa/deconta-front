@@ -12,12 +12,12 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, path: "/dashboard",    label: "Dashboard"    },
-  { icon: Building,        path: "/account",      label: "Conta"        },
-  { icon: CreditCard,      path: "/cards",        label: "Cartões"      },
-  { icon: Users,           path: "/responsibles", label: "Responsáveis" },
-  { icon: Tag,             path: "/categories",   label: "Categorias"   },
-  { icon: History,         path: "/history",      label: "Histórico"    },
+  { icon: LayoutDashboard, path: "/dashboard",    label: "Dashboard",    id: "tour-sidebar-dashboard" },
+  { icon: Building,        path: "/account",      label: "Conta",        id: "tour-sidebar-account" },
+  { icon: CreditCard,      path: "/cards",        label: "Cartões",      id: "tour-sidebar-cards" },
+  { icon: Users,           path: "/responsibles", label: "Responsáveis", id: "tour-sidebar-responsibles" },
+  { icon: Tag,             path: "/categories",   label: "Categorias",   id: "tour-sidebar-categories" },
+  { icon: History,         path: "/history",      label: "Histórico",    id: "tour-sidebar-history" },
 ];
 
 export default function Sidebar() {
@@ -39,6 +39,7 @@ export default function Sidebar() {
         <Link
           key={item.path}
           to={item.path}
+          id={item.id}
           className={getItemStyles(item.path)}
           title={item.label}
         >

@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
-import { getMe, loginUser, logoutUser, type User } from "@/features/auth/services/auth.service";
+import { getMe, loginUser, logoutUser, loginWithGoogleBackend, type User } from "@/features/auth/services/auth.service";
 import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
@@ -7,6 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, passwordHash: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -57,6 +58,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function loginWithGoogle(credential: string) {
+    try {
+      await loginWithGoogleBackend(credential);
+      const userData = await getMe();
+      if (!userData || Object.keys(userData).length === 0) {
+        throw new Error("Falha ao recuperar dados do usuário após login com Google.");
+      }
+      setUser(mapUser(userData));
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login com Google falhou", error);
+      throw error;
+    }
+  }
+
   async function logout() {
     try {
       await logoutUser();
@@ -74,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle,
         logout,
         refreshUser,
       }}

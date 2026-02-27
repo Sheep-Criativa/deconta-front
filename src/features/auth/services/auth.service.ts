@@ -16,10 +16,16 @@ export async function loginUser(email: string, passwordHash: string) {
   return response.data;
 }
 
+export async function loginWithGoogleBackend(token: string) {
+  const response = await api.post('/auth/google', { token });
+  return response.data;
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
+  firstAccess: boolean;
 }
 
 export async function getMe(): Promise<User> {
@@ -33,5 +39,10 @@ export async function logoutUser() {
 
 export async function updateUser(id: number, data: { name: string; email: string; passwordHash: string }) {
   const response = await api.put(`/users/${id}`, data);
+  return response.data as User;
+}
+
+export async function updateFirstAccess(id: number, firstAccess: boolean) {
+  const response = await api.patch(`/users/${id}/first-access`, { firstAccess });
   return response.data as User;
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { GoogleLogin } from '@react-oauth/google';
 
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "../components/AuthLayout";
@@ -38,7 +39,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   
-  const { login } = useAuth(); // Using context
+  const { login, loginWithGoogle } = useAuth(); // Using context
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -166,10 +167,27 @@ export default function Login() {
           <div className="mt-8 text-center">
             <p className="text-sm text-zinc-500 mb-4">Ou continue com:</p>
 
-            <div className="flex justify-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
-              <div className="w-10 h-10 rounded-lg bg-zinc-100" />
+            <div className="flex justify-center">
+               <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      setLoading(true);
+                      setFormError(null);
+                      try {
+                        await loginWithGoogle(credentialResponse.credential);
+                      } catch (err: any) {
+                        setFormError("Falha na autenticação via Google");
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                  onError={() => {
+                    setFormError("Falha na autenticação via Google");
+                  }}
+                  shape="rectangular"
+                  theme="outline"
+                  size="large"
+                />
             </div>
           </div>
 
