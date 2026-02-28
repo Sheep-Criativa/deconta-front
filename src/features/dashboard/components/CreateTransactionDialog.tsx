@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, createCategory, type Category } from "../services/category.service";
@@ -268,7 +268,10 @@ export function CreateTransactionDialog({
           </DialogTitle>
           {isCreditCard && (
             <p className="text-sm text-zinc-400 mt-1 font-medium">
-              💳 Parcelamento disponível logo abaixo.
+              <span className="inline-flex items-center gap-1.5">
+                <CreditCard size={14} className="text-zinc-500" />
+                Parcelamento disponível logo abaixo.
+              </span>
             </p>
           )}
         </DialogHeader>
@@ -337,7 +340,7 @@ export function CreateTransactionDialog({
                 <FormItem>
                   <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Cartão</FormLabel>
                   <div className="h-11 rounded-xl bg-zinc-900 text-white flex items-center px-3 gap-2 text-sm font-bold">
-                    <span>💳</span>
+                    <CreditCard size={14} className="shrink-0" />
                     <span className="truncate">
                       {accounts.find(a => a.id === defaultAccountId)?.name ?? "Cartão"}
                     </span>
@@ -359,7 +362,14 @@ export function CreateTransactionDialog({
                         <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
                           {accounts.map(acc => (
                             <SelectItem key={acc.id} value={String(acc.id)} className="font-medium">
-                              {acc.type.trim() === AccountType.CREDIT_CARD ? "💳 " : "🏦 "}{acc.name}
+                              <span className="flex items-center gap-2">
+                                {acc.type.trim() === AccountType.CREDIT_CARD ? (
+                                  <CreditCard size={14} className="text-zinc-500" />
+                                ) : (
+                                  <Landmark size={14} className="text-zinc-500" />
+                                )}
+                                <span>{acc.name}</span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -555,9 +565,24 @@ export function CreateTransactionDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
-                      <SelectItem value="CONFIRMED" className="font-medium text-emerald-600">✅ Confirmado</SelectItem>
-                      <SelectItem value="PENDING"   className="font-medium text-amber-600">⏳ Pendente</SelectItem>
-                      <SelectItem value="RECONCILED" className="font-medium text-blue-600">🔒 Conciliado</SelectItem>
+                      <SelectItem value="CONFIRMED" className="font-medium text-emerald-600">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 size={14} />
+                          <span>Confirmado</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="PENDING" className="font-medium text-amber-600">
+                        <span className="flex items-center gap-2">
+                          <Clock3 size={14} />
+                          <span>Pendente</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="RECONCILED" className="font-medium text-blue-600">
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck size={14} />
+                          <span>Conciliado</span>
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
