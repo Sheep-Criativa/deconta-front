@@ -69,7 +69,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           className="absolute top-8 left-8 z-10"
         >
           <img
-            src="/images/logoverdical.png"
+            src="/images/logoverticalbranco.png"
             alt="DeConta Logo"
             className="w-1/5 h-auto block object-contain leading-none -mt-14 -ml-4"
           />
