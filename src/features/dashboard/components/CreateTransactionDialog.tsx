@@ -257,9 +257,9 @@ export function CreateTransactionDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] bg-white rounded-3xl border-none shadow-2xl p-8" aria-describedby={undefined}>
-        <DialogHeader className="mb-6">
-          <DialogTitle className="text-2xl font-black text-zinc-900 tracking-tight">
+      <DialogContent className="sm:max-w-[520px] bg-white rounded-t-3xl sm:rounded-3xl border-none shadow-2xl p-4 sm:p-8 max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogHeader className="mb-4 sm:mb-6">
+          <DialogTitle className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
             {isEditMode
               ? "Editar Transação"
               : isCreditCard
@@ -287,7 +287,7 @@ export function CreateTransactionDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Tipo</FormLabel>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {(Object.keys(typeConfig) as TransactionType[]).map(t => {
                         const cfg = typeConfig[t];
                         const Icon = cfg.icon;
@@ -334,14 +334,14 @@ export function CreateTransactionDialog({
             />
 
             {/* Account + Category row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Account — locked badge when defaultAccountId is set */}
               {defaultAccountId ? (
-                <FormItem>
+                <FormItem className="min-w-0 flex flex-col">
                   <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Cartão</FormLabel>
-                  <div className="h-11 rounded-xl bg-zinc-900 text-white flex items-center px-3 gap-2 text-sm font-bold">
+                  <div className="h-11 rounded-xl bg-zinc-900 text-white flex items-center px-3 gap-2 text-sm font-bold overflow-hidden">
                     <CreditCard size={14} className="shrink-0" />
-                    <span className="truncate">
+                    <span className="truncate flex-1 min-w-0">
                       {accounts.find(a => a.id === defaultAccountId)?.name ?? "Cartão"}
                     </span>
                   </div>
@@ -351,24 +351,24 @@ export function CreateTransactionDialog({
                   control={form.control}
                   name="accountId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0 flex flex-col">
                       <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Conta</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value?.toString()}>
                         <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
-                            <SelectValue placeholder="Selecione..." />
+                          <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
+                            <SelectValue placeholder="Selecione..." className="truncate" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                        <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
                           {accounts.map(acc => (
-                            <SelectItem key={acc.id} value={String(acc.id)} className="font-medium">
-                              <span className="flex items-center gap-2">
+                            <SelectItem key={acc.id} value={String(acc.id)} className="font-medium min-w-0">
+                              <span className="flex items-center gap-2 truncate pr-2">
                                 {acc.type.trim() === AccountType.CREDIT_CARD ? (
-                                  <CreditCard size={14} className="text-zinc-500" />
+                                  <CreditCard size={14} className="text-zinc-500 shrink-0" />
                                 ) : (
-                                  <Landmark size={14} className="text-zinc-500" />
+                                  <Landmark size={14} className="text-zinc-500 shrink-0" />
                                 )}
-                                <span>{acc.name}</span>
+                                <span className="truncate flex-1">{acc.name}</span>
                               </span>
                             </SelectItem>
                           ))}
@@ -384,33 +384,33 @@ export function CreateTransactionDialog({
                 control={form.control}
                 name="categoryId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0 flex flex-col">
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Categoria</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value?.toString()}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
-                          <SelectValue placeholder="Selecione..." />
+                        <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
+                          <SelectValue placeholder="Selecione..." className="truncate" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                      <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
                         {/* Sem categoria option */}
-                        <SelectItem value="0" className="font-medium text-zinc-400">
-                          <span className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block" />
-                            Sem categoria
+                        <SelectItem value="0" className="font-medium text-zinc-400 min-w-0">
+                          <span className="flex items-center gap-2 truncate pr-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block shrink-0" />
+                            <span className="truncate">Sem categoria</span>
                           </span>
                         </SelectItem>
                         {filteredCategories.map(cat => (
-                          <SelectItem key={cat.id} value={String(cat.id)} className="font-medium">
-                            <span className="flex items-center gap-2">
+                          <SelectItem key={cat.id} value={String(cat.id)} className="font-medium min-w-0">
+                            <span className="flex items-center gap-2 truncate pr-2">
                               <span
                                 className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
                                 style={{ backgroundColor: cat.color || "#64748b" }}
                               />
-                              {cat.name}
+                              <span className="truncate flex-1">{cat.name}</span>
                             </span>
                           </SelectItem>
                         ))}
@@ -435,23 +435,23 @@ export function CreateTransactionDialog({
               control={form.control}
               name="responsibleId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="min-w-0 flex flex-col">
                   <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Responsável</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value?.toString()}>
                     <FormControl>
-                      <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
-                        <SelectValue placeholder="Selecione..." />
+                      <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
+                        <SelectValue placeholder="Selecione..." className="truncate" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                    <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
                       {responsibles.map(r => (
-                        <SelectItem key={r.id} value={String(r.id)} className="font-medium">
-                          <span className="flex items-center gap-2">
+                        <SelectItem key={r.id} value={String(r.id)} className="font-medium min-w-0">
+                          <span className="flex items-center gap-2 truncate pr-2">
                             <span
-                              className="w-2.5 h-2.5 rounded-full inline-block"
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
                               style={{ backgroundColor: r.color || "#94a3b8" }}
                             />
-                            {r.name}
+                            <span className="truncate flex-1">{r.name}</span>
                           </span>
                         </SelectItem>
                       ))}
@@ -471,12 +471,12 @@ export function CreateTransactionDialog({
             />
 
             {/* Dates row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">
                       {isCreditCard ? "Data da Compra" : "Data"}
                     </FormLabel>
@@ -492,7 +492,7 @@ export function CreateTransactionDialog({
                 control={form.control}
                 name="paymentDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">
                       {isCreditCard ? "Data 1ª Parcela" : "Data de Pagamento"}
                     </FormLabel>
@@ -511,9 +511,9 @@ export function CreateTransactionDialog({
                 control={form.control}
                 name="installmentTotal"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Parcelas</FormLabel>
-                    <div className="grid grid-cols-6 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {[1, 2, 3, 6, 9, 12].map(n => (
                         <button
                           key={n}
