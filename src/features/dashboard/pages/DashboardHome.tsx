@@ -6,15 +6,16 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, CreditCard,
-  ArrowUpRight, ArrowDownRight, Loader2, List, Tag,
+  ArrowUpRight, ArrowDownRight, Loader2, List, Tag, ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
-import { getTransactions, type Transaction } from "../services/transaction.service";
+import { getTransactions, type Transaction, type TransactionType } from "../services/transaction.service";
 import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
+import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { buildBalanceMap, computeTotalBalance } from "../utils/balanceUtils";
 import { OnboardingTour } from "../components/OnboardingTour";
@@ -286,28 +287,44 @@ export default function DashboardHome() {
   const [categories,   setCategories]   = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
   const [loading,      setLoading]      = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
+  const [isTxDialogOp, setIsTxDialogOpen] = useState(false);
+  const [txDialogType, setTxDialogType] = useState<TransactionType>("EXPENSE");
 
-    import("../services/category.service").then(({ getCategories }) => {
-      Promise.all([
+  const loadData = async () => {
+    if (!user) return;
+    const { getCategories } = await import("../services/category.service");
+    try {
+      const [accs, txs, cats] = await Promise.all([
         getAccounts(user.id),
         getTransactions(user.id),
         getCategories(user.id),
-      ]).then(async ([accs, txs, cats]) => {
-        setAccounts(accs.filter(a => a.isActive));
-        setTransactions(txs);
-        setCategories(cats);
+      ]);
+      setAccounts(accs.filter(a => a.isActive));
+      setTransactions(txs);
+      setCategories(cats);
 
-        // Fetch statements for all credit cards
-        const ccAccounts = accs.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
-        if (ccAccounts.length > 0) {
-          const allStmts = await Promise.all(ccAccounts.map(a => getStatements(a.id).catch(() => [])));
-          setStatements(allStmts.flat());
-        }
-      }).finally(() => setLoading(false));
-    });
+      // Fetch statements for all credit cards
+      const ccAccounts = accs.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
+      if (ccAccounts.length > 0) {
+        const allStmts = await Promise.all(ccAccounts.map(a => getStatements(a.id).catch(() => [])));
+        setStatements(allStmts.flat());
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      loadData();
+    }
   }, [user]);
+
+  function handleOpenTx(type: TransactionType) {
+    setTxDialogType(type);
+    setIsTxDialogOpen(true);
+  }
 
   // KPI calculations
   const now = new Date();
@@ -356,28 +373,57 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="-mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <OnboardingTour />
       
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <BalanceCard accounts={accounts} transactions={transactions} />
-        <KpiCard
-          title="Receitas do Mês"
-          value={fmt(monthIncome)}
-          subtitle={format(now, "MMMM yyyy", { locale: ptBR })}
-          icon={TrendingUp}
-          positive={true}
-          trend={incomeTrend}
-        />
-        <KpiCard
-          title="Despesas do Mês"
-          value={fmt(monthExpense)}
-          subtitle={format(now, "MMMM yyyy", { locale: ptBR })}
-          icon={TrendingDown}
-          positive={false}
-          trend={expenseTrend}
-        />
+
+        {/* Receitas KPI */}
+        <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receitas do Mês</p>
+            <button 
+              onClick={() => handleOpenTx('INCOME')}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-bold text-xs transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              <ArrowUpCircle size={14} />
+              Receita
+            </button>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{fmt(monthIncome)}</h2>
+            <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
+          </div>
+          <div className={`flex items-center gap-1 text-[11px] font-bold ${incomeTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            {incomeTrend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+            {Math.abs(incomeTrend).toFixed(1)}% em relação ao mês anterior
+          </div>
+        </BaseCard>
+
+        {/* Despesas KPI */}
+        <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Despesas do Mês</p>
+            <button 
+              onClick={() => handleOpenTx('EXPENSE')}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition-colors"
+            >
+              <ArrowDownCircle size={14} />
+              Despesa
+            </button>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{fmt(monthExpense)}</h2>
+            <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
+          </div>
+          <div className={`flex items-center gap-1 text-[11px] font-bold ${expenseTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            {expenseTrend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+            {Math.abs(expenseTrend).toFixed(1)}% em relação ao mês anterior
+          </div>
+        </BaseCard>
+
       </div>
 
       {/* ── Main Grid ── */}
@@ -572,6 +618,13 @@ export default function DashboardHome() {
           </BaseCard>
         </div>
       </div>
+
+      <CreateTransactionDialog
+        open={isTxDialogOp}
+        onOpenChange={setIsTxDialogOpen}
+        onSuccess={loadData}
+        defaultType={txDialogType}
+      />
     </div>
   );
 }
