@@ -1,20 +1,40 @@
 import { useState, useEffect } from "react";
 import Joyride, { type CallBackProps, STATUS } from 'react-joyride';
 import { useAuth } from "@/hooks/useAuth";
-import { updateFirstAccess } from "@/features/auth/services/auth.service";
+import { updateFirstAccess, getMe } from "@/features/auth/services/auth.service";
 
 export function OnboardingTour() {
   const { user, refreshUser } = useAuth();
   const [run, setRun] = useState(false);
 
   useEffect(() => {
-    // Only run tour if user exists and firstAccess is strictly true
-    if (user && user.firstAccess === true) {
-      // Small timeout to allow DOM to render before attaching tooltips
-      const timer = setTimeout(() => {
-        setRun(true);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (!user) return;
+    
+    const localtourDrawn = localStorage.getItem(`tour_completed_${user.id}`);
+    if (localtourDrawn === "true") {
+      return; // Já concluído ou pulado nessa máquina, aborta tudo.
+    }
+
+    // Only verify with backend if local token claims it's the first access
+    if (user.firstAccess === true) {
+      let isMounted = true;
+      let timer: ReturnType<typeof setTimeout>;
+
+      // Query backend's /auth/me directly to get the most updated state, since JWT might be stale
+      getMe().then((dbUser) => {
+        if (isMounted && dbUser && dbUser.firstAccess === true) {
+          timer = setTimeout(() => {
+            setRun(true);
+          }, 1000);
+        }
+      }).catch(err => {
+        console.error("Failed to verify firstAccess from DB:", err);
+      });
+
+      return () => {
+        isMounted = false;
+        if (timer) clearTimeout(timer);
+      };
     }
   }, [user]);
 
@@ -25,6 +45,9 @@ export function OnboardingTour() {
     if (finishedStatuses.includes(status)) {
       setRun(false);
       if (user && user.id) {
+        // Marca imediatamente no local storage para NUNCA mais rodar neste navegador
+        localStorage.setItem(`tour_completed_${user.id}`, "true");
+        
         try {
           await updateFirstAccess(user.id, false);
           // Refresh context so firstAccess flag updates
