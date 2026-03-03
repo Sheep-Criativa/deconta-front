@@ -37,8 +37,8 @@ import { toast } from "sonner";
 
 const formSchema = z.object({
   accountId: z.coerce.number().min(1, "Selecione uma conta"),
-  categoryId: z.coerce.number().min(0), // 0 = Sem categoria (mapped to default on submit)
-  responsibleId: z.coerce.number().min(1, "Selecione um responsável"),
+  categoryId: z.coerce.number().min(0).optional(), // 0 = Sem categoria
+  responsibleId: z.coerce.number().min(0).optional(), // 0 = Sem responsável
   description: z.string().max(250).optional(),
   amount: z.coerce.number().min(0.01, "Valor deve ser maior que zero"),
   date: z.string().min(1, "Selecione uma data"),
@@ -105,7 +105,7 @@ export function CreateTransactionDialog({
       getAccounts(user.id),
       getCategories(user.id),
       getResponsibles(user.id),
-    ]).then(([accs, cats, resps]) => {
+    ]).then(async ([accs, cats, resps]) => {
       const activeAccs = accs.filter(a => a.isActive);
       setAccounts(
         onlyCreditCards
@@ -113,8 +113,27 @@ export function CreateTransactionDialog({
           : activeAccs
       );
       setCategories(cats);
-      const activeResps = resps.filter(r => r.isActive);
+      
+      let activeResps = resps.filter(r => r.isActive);
+      
+      // If user has NO responsibles at all, auto-create one named "Eu" or their name
+      if (activeResps.length === 0) {
+        try {
+          const { createResponsible } = await import("../services/responsible.service");
+          const defaultName = user.name ? user.name.split(" ")[0] : "Eu";
+          const newResp = await createResponsible({
+            userId: user.id,
+            name: defaultName,
+            color: "#6366f1"
+          });
+          activeResps = [newResp];
+        } catch (e) {
+          console.error("Auto-create fallback responsible failed", e);
+        }
+      }
+      
       setResponsibles(activeResps);
+      
       // Auto-select: prefer the responsible whose name matches the logged-in user,
       // otherwise fall back to the first one.
       if (!transaction && activeResps.length > 0) {
@@ -169,25 +188,75 @@ export function CreateTransactionDialog({
     if (!user) return;
     setLoading(true);
     try {
-      // Resolve "Sem categoria" → find or create a "Geral" default category
+      // Fallback Categoria para evitar erro 500
       let resolvedCategoryId = values.categoryId;
       if (!resolvedCategoryId || resolvedCategoryId === 0) {
         const catType = (values.type === "INCOME") ? "INCOME" : "EXPENSE";
-        const existing = categories.find(
+        const existingCat = categories.find(
           c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType
         );
-        if (existing) {
-          resolvedCategoryId = existing.id;
+        if (existingCat) {
+          resolvedCategoryId = existingCat.id;
         } else {
-          const created = await createCategory({
-            userId: user.id,
-            name: "Geral",
-            icon: "Tag",
-            color: "#64748b",
-            type: catType,
-          });
-          resolvedCategoryId = created.id;
-          setCategories(prev => [...prev, created]);
+          try {
+            const { createCategory } = await import("../services/category.service");
+            const createdCat = await createCategory({
+              userId: user.id,
+              name: "Geral",
+              icon: "Tag",
+              color: "#64748b",
+              type: catType,
+            });
+            resolvedCategoryId = createdCat.id;
+            setCategories(prev => [...prev, createdCat]);
+          } catch (createErr) {
+            // Se o backend retornar erro pois já existe (causando até crash de headers sent)
+            // refazemos o fetch das categorias para ver se o registro apareceu.
+            const { getCategories } = await import("../services/category.service");
+            const freshCats = await getCategories(user.id);
+            setCategories(freshCats);
+            const foundCat = freshCats.find(c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType);
+            if (foundCat) {
+              resolvedCategoryId = foundCat.id;
+            } else {
+              throw createErr;
+            }
+          }
+        }
+      }
+
+      // Fallback Responsável para evitar erro 500
+      let resolvedRespId = values.responsibleId;
+      if (!resolvedRespId || resolvedRespId === 0) {
+        const userName = user.name ? user.name.split(" ")[0] : "Eu";
+        const existingResp = responsibles.find(
+          r => r.name.trim().toLowerCase() === userName.toLowerCase()
+        );
+        if (existingResp) {
+          resolvedRespId = existingResp.id;
+        } else {
+          try {
+            const { createResponsible } = await import("../services/responsible.service");
+            const createdResp = await createResponsible({
+              userId: user.id,
+              name: userName,
+              color: "#6366f1"
+            });
+            resolvedRespId = createdResp.id;
+            setResponsibles(prev => [...prev, createdResp]);
+          } catch (createErr) {
+            // Repetimos o processo para o responsável
+            const { getResponsibles } = await import("../services/responsible.service");
+            const freshResps = await getResponsibles(user.id);
+            const activeFreshResps = freshResps.filter(r => r.isActive);
+            setResponsibles(activeFreshResps);
+            const foundResp = activeFreshResps.find(r => r.name.trim().toLowerCase() === userName.toLowerCase());
+            if (foundResp) {
+              resolvedRespId = foundResp.id;
+            } else {
+              throw createErr;
+            }
+          }
         }
       }
 
@@ -197,7 +266,7 @@ export function CreateTransactionDialog({
       if (isEditMode && transaction) {
         await updateTransaction(transaction.id, {
           categoryId: resolvedCategoryId,
-          responsibleId: values.responsibleId,
+          responsibleId: resolvedRespId,
           description: values.description || undefined,
           amount: values.amount,
           date: baseDate,
@@ -210,8 +279,8 @@ export function CreateTransactionDialog({
         await createTransaction({
           userId: user.id,
           accountId: values.accountId,
-          categoryId: resolvedCategoryId,
-          responsibleId: values.responsibleId,
+          categoryId: resolvedCategoryId!,
+          responsibleId: resolvedRespId!,
           description: values.description || undefined,
           amount: values.amount,
           date: baseDate,
@@ -444,6 +513,13 @@ export function CreateTransactionDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
+                      {/* Sem responsável option */}
+                      <SelectItem value="0" className="font-medium text-zinc-400 min-w-0">
+                        <span className="flex items-center gap-2 truncate pr-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block shrink-0" />
+                          <span className="truncate">Sem responsável</span>
+                        </span>
+                      </SelectItem>
                       {responsibles.map(r => (
                         <SelectItem key={r.id} value={String(r.id)} className="font-medium min-w-0">
                           <span className="flex items-center gap-2 truncate pr-2">
