@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
-import { getCategories, createCategory, type Category } from "../services/category.service";
+import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { createTransaction, updateTransaction, type Transaction, type TransactionType, type TransactionStatus } from "../services/transaction.service";
 import { CreateCategoryDialog } from "./CreateCategoryDialog";

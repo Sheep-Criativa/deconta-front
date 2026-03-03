@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts";
 import {
-  Wallet, TrendingUp, TrendingDown, CreditCard,
+  Wallet, TrendingUp, CreditCard,
   ArrowUpRight, ArrowDownRight, Loader2, List, Tag, ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
@@ -69,38 +69,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-function KpiCard({
-  title, value, subtitle, icon: Icon, positive, trend,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: any;
-  positive?: boolean;
-  trend?: number;
-}) {
-  return (
-    <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
-      <div className="flex justify-between items-start">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{title}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${positive !== false ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"}`}>
-          <Icon size={17} />
-        </div>
-      </div>
-      <div>
-        <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{value}</h2>
-        {subtitle && <p className="text-xs text-zinc-400 font-medium mt-0.5">{subtitle}</p>}
-      </div>
-      {trend !== undefined && (
-        <div className={`flex items-center gap-1 text-[11px] font-bold ${trend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-          {trend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-          {Math.abs(trend).toFixed(1)}% em relação ao mês anterior
-        </div>
-      )}
-    </BaseCard>
-  );
-}
+
 
 // ── Balance Card with per-account mini chart ────────────────────────────────
 const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899"];
