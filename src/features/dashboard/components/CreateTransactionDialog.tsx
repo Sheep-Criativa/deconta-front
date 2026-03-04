@@ -36,7 +36,10 @@ import { CreateResponsibleDialog } from "./CreateResponsibleDialog";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  accountId: z.coerce.number().min(1, "Selecione uma conta"),
+  accountId: z.preprocess((val) => {
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number().min(1, "Selecione uma conta")),
   categoryId: z.coerce.number().min(0).optional(), // 0 = Sem categoria
   responsibleId: z.coerce.number().min(0).optional(), // 0 = Sem responsável
   description: z.string().max(250).optional(),
@@ -272,7 +275,7 @@ export function CreateTransactionDialog({
           date: baseDate,
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
-          status: values.status as TransactionStatus,
+          status: isCreditCard ? "CONFIRMED" : values.status as TransactionStatus,
         });
         toast.success("Transação atualizada!");
       } else {
@@ -286,7 +289,7 @@ export function CreateTransactionDialog({
           date: baseDate,
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
-          status: values.status as TransactionStatus,
+          status: isCreditCard ? "CONFIRMED" : values.status as TransactionStatus,
           ...(isCreditCard && {
             installmentTotal: values.installmentTotal ?? 1,
           }),
@@ -628,43 +631,45 @@ export function CreateTransactionDialog({
             )}
 
             {/* Status */}
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
-                      <SelectItem value="CONFIRMED" className="font-medium text-emerald-600">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle2 size={14} />
-                          <span>Confirmado</span>
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="PENDING" className="font-medium text-amber-600">
-                        <span className="flex items-center gap-2">
-                          <Clock3 size={14} />
-                          <span>Pendente</span>
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="RECONCILED" className="font-medium text-blue-600">
-                        <span className="flex items-center gap-2">
-                          <ShieldCheck size={14} />
-                          <span>Conciliado</span>
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isCreditCard && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                        <SelectItem value="CONFIRMED" className="font-medium text-emerald-600">
+                          <span className="flex items-center gap-2">
+                            <CheckCircle2 size={14} />
+                            <span>Confirmado</span>
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="PENDING" className="font-medium text-amber-600">
+                          <span className="flex items-center gap-2">
+                            <Clock3 size={14} />
+                            <span>Pendente</span>
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="RECONCILED" className="font-medium text-blue-600">
+                          <span className="flex items-center gap-2">
+                            <ShieldCheck size={14} />
+                            <span>Conciliado</span>
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Description */}
             <FormField

@@ -88,9 +88,7 @@ export function CreateAccountDialog({
         initialBalance: Number(editingAccount.initialBalance),
         currencyCode:   editingAccount.currencyCode.trim(),
         closingDay:     editingAccount.closingDay?.toString() ?? "",
-        dueDay:         editingAccount.dueDay
-                          ? editingAccount.dueDay.split("T")[0]   // ISO → "YYYY-MM-DD"
-                          : "",
+        dueDay:         editingAccount.dueDay?.toString() ?? "",
         limitAmount:    editingAccount.limitAmount ? Number(editingAccount.limitAmount) : 0,
       });
     } else {
@@ -125,9 +123,9 @@ export function CreateAccountDialog({
         };
 
         if (values.type === AccountType.CREDIT_CARD) {
-          payload.closingDay  = values.closingDay || null;
+          payload.closingDay  = values.closingDay ? values.closingDay.toString() : null;
           payload.limitAmount = values.limitAmount ?? null;
-          if (values.dueDay) payload.dueDay = new Date(values.dueDay + "T12:00:00");
+          payload.dueDay      = values.dueDay ? values.dueDay.toString() : null;
         }
 
         await updateAccount(editingAccount.id, payload);
@@ -145,9 +143,9 @@ export function CreateAccountDialog({
         };
 
         if (values.type === AccountType.CREDIT_CARD) {
-          payload.closingDay  = values.closingDay || null;
+          payload.closingDay  = values.closingDay ? values.closingDay.toString() : null;
           payload.limitAmount = values.limitAmount ?? null;
-          if (values.dueDay) payload.dueDay = new Date(values.dueDay + "T12:00:00");
+          payload.dueDay      = values.dueDay ? values.dueDay.toString() : null;
         }
 
         await createAccount(payload);
@@ -314,7 +312,7 @@ export function CreateAccountDialog({
                       <FormLabel className="text-sm font-semibold text-zinc-800">Vencimento</FormLabel>
                       <FormControl>
                         <Input
-                          type="date"
+                          type="number" min="1" max="31" placeholder="Ex: 10"
                           className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 focus-visible:ring-emerald-500"
                           {...field}
                         />
