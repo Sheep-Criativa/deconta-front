@@ -12,6 +12,7 @@ import Transactions from "@/features/dashboard/pages/Transactions";
 import StatementDetail from "@/features/dashboard/pages/StatementDetail";
 import ReportBug from "@/features/dashboard/pages/ReportBug";
 import Help from "@/features/dashboard/pages/Help";
+import { ReportsPage } from "@/features/reports/pages/ReportsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
               { path: "/categories",  element: <Categories /> },
               { path: "/cards",       element: <CreditCards /> },
               { path: "/history",     element: <Transactions /> },
+              { path: "/reports",     element: <ReportsPage /> },
               { path: "/profile",     element: <Profile /> },
               { path: "/cards/:cardId/statement/:statementId", element: <StatementDetail /> },
               { path: "/report-bug",  element: <ReportBug /> },
