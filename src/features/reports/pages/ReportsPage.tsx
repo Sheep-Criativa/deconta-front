@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { ReportsFilterForm, type FormFilterData } from "../components/ReportsFilterForm";
+import { CreditCardReportsFilterForm } from "../components/CreditCardReportsFilterForm";
 import { ReportTemplate } from "../components/ReportTemplate";
 import { BaseCard } from "@/features/dashboard/components/BaseCard";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -16,6 +17,7 @@ import {
   getByCategoryReport,
   getByResponsibleReport,
   getByAccountReport,
+  getDetailedReport,
   downloadPdfReport,
   type GetSummaryResponse,
 } from "../services/reports.service";
@@ -32,10 +34,14 @@ export function ReportsPage() {
 
   // State for the Report Template
   const [currentGroupBy, setCurrentGroupBy] = useState<"none" | "category" | "responsible" | "account">("none");
+  const [currentLayoutMode, setCurrentLayoutMode] = useState<"COMPLETE" | "SIMPLE">("COMPLETE");
   const [reportDateRange, setReportDateRange] = useState<string>("");
   const [summaryData, setSummaryData] = useState<GetSummaryResponse | undefined>(undefined);
   const [listData, setListData] = useState<any[] | undefined>(undefined);
   const [hasData, setHasData] = useState(false);
+  
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"GENERAL" | "CREDIT_CARD">("GENERAL");
 
   // Load select options
   useEffect(() => {
@@ -77,13 +83,17 @@ export function ReportsPage() {
         const data = await getByAccountReport(user.id, filters);
         setListData(data);
       } else {
-        setListData(undefined);
+        const data = await getDetailedReport(user.id, filters);
+        setListData(data);
       }
 
       setCurrentGroupBy(filters.groupBy);
+      setCurrentLayoutMode(filters.layoutMode || "COMPLETE");
 
       // Define text for Date Range display
-      if (filters.startDate && filters.endDate) {
+      if (filters.customDateRangeLabel) {
+        setReportDateRange(filters.customDateRangeLabel);
+      } else if (filters.startDate && filters.endDate) {
         setReportDateRange(`${format(new Date(filters.startDate + "T12:00:00"), "dd/MM/yyyy")} até ${format(new Date(filters.endDate + "T12:00:00"), "dd/MM/yyyy")}`);
       } else if (filters.startDate) {
         setReportDateRange(`A partir de ${format(new Date(filters.startDate + "T12:00:00"), "dd/MM/yyyy")}`);
@@ -117,6 +127,7 @@ export function ReportsPage() {
         summaryData,
         listData,
         groupBy: currentGroupBy,
+        layoutMode: currentLayoutMode,
         reportDateRange,
         userName: user?.name || "Usuário"
       };
@@ -173,15 +184,51 @@ export function ReportsPage() {
       <div className="flex flex-col xl:flex-row gap-6 items-start w-full">
         
         {/* Formulário de Filtros Fixado à esquerda ou em cima (mobile) */}
-        <div className="w-full xl:w-[350px] shrink-0 xl:sticky xl:top-[28px]">
-          <ReportsFilterForm
-            accounts={accounts}
-            categories={categories}
-            responsibles={responsibles}
-            onSubmitFilters={handleGenerateData}
-            isLoading={loadingData}
-            onExportPdf={handleExportPdf}
-          />
+        <div className="w-full xl:w-[350px] shrink-0 xl:sticky xl:top-[28px] flex flex-col gap-4">
+          
+          {/* Aba / Tab Switcher */}
+          <div className="bg-white p-2 rounded-2xl border border-zinc-100 shadow-sm flex gap-2">
+            <button
+              onClick={() => setActiveTab("GENERAL")}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === "GENERAL" 
+                  ? "bg-emerald-50 text-emerald-600 shadow-sm" 
+                  : "text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+              }`}
+            >
+              Visão Geral
+            </button>
+            <button
+              onClick={() => setActiveTab("CREDIT_CARD")}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === "CREDIT_CARD" 
+                  ? "bg-indigo-50 text-indigo-600 shadow-sm" 
+                  : "text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600"
+              }`}
+            >
+              Faturas de Cartão
+            </button>
+          </div>
+
+          {activeTab === "GENERAL" ? (
+            <ReportsFilterForm
+              accounts={accounts}
+              categories={categories}
+              responsibles={responsibles}
+              onSubmitFilters={handleGenerateData}
+              isLoading={loadingData}
+              onExportPdf={handleExportPdf}
+            />
+          ) : (
+            <CreditCardReportsFilterForm
+              accounts={accounts}
+              categories={categories}
+              responsibles={responsibles}
+              onSubmitFilters={handleGenerateData}
+              isLoading={loadingData}
+              onExportPdf={handleExportPdf}
+            />
+          )}
 
           {!hasData && !loadingData && (
             <div className="bg-amber-50 text-amber-800 p-4 rounded-2xl border border-amber-200 mt-4 flex gap-3 text-sm font-medium">
@@ -208,6 +255,7 @@ export function ReportsPage() {
               groupBy={currentGroupBy}
               summaryData={summaryData}
               listData={listData}
+              layoutMode={currentLayoutMode}
               userFullName={user?.name || "Usuário Deconta"}
             />
 

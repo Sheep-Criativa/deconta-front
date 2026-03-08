@@ -6,6 +6,7 @@ import type { GetSummaryResponse } from "../services/reports.service";
 interface ReportTemplateProps {
   reportDateRange: string;
   groupBy: "none" | "category" | "responsible" | "account";
+  layoutMode?: "COMPLETE" | "SIMPLE";
   summaryData?: GetSummaryResponse;
   listData?: any[];
   userFullName?: string;
@@ -15,7 +16,7 @@ const formatCurrency = (val: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 
 export const ReportTemplate = React.forwardRef<HTMLDivElement, ReportTemplateProps>(
-  ({ reportDateRange, groupBy, summaryData, listData, userFullName }, ref) => {
+  ({ reportDateRange, groupBy, summaryData, listData, layoutMode = "COMPLETE", userFullName }, ref) => {
     
     return (
       <div 
@@ -38,7 +39,7 @@ export const ReportTemplate = React.forwardRef<HTMLDivElement, ReportTemplatePro
         </div>
 
         {/* Resumo Key Metrics */}
-        {summaryData && (
+        {summaryData && layoutMode === "COMPLETE" && (
           <div className="grid grid-cols-3 gap-6 mb-10">
             <div className="bg-zinc-50 rounded-2xl p-5 border border-zinc-100">
               <p className="text-xs font-black uppercase text-zinc-400 tracking-widest mb-1">Total de Entradas</p>
@@ -57,26 +58,64 @@ export const ReportTemplate = React.forwardRef<HTMLDivElement, ReportTemplatePro
           </div>
         )}
 
-        {/* Listagens Agrupadas (se hover groupBy) */}
-        {groupBy !== "none" && listData && listData.length > 0 && (
+        {summaryData && layoutMode === "SIMPLE" && (
+          <div className="mb-8 p-4 rounded-xl bg-zinc-50 border border-zinc-200 flex justify-between items-center">
+            <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Total Consolidado</p>
+            <p className={`text-3xl font-black ${summaryData.netBalance >= 0 ? "text-zinc-800" : "text-rose-600"}`}>
+              {formatCurrency(summaryData.totalIncome > 0 && summaryData.totalExpense === 0 ? summaryData.totalIncome : summaryData.totalExpense > 0 && summaryData.totalIncome === 0 ? summaryData.totalExpense : Math.abs(summaryData.netBalance))}
+            </p>
+          </div>
+        )}
+
+        {/* Listagens Agrupadas (se hover groupBy) OU Listagem Detalhada */}
+        {listData && listData.length > 0 && (
           <div className="mb-10">
             <h3 className="text-lg font-black text-zinc-800 border-b border-zinc-200 pb-2 mb-4">
-              {groupBy === "category" ? "Despesas por Categoria" : groupBy === "responsible" ? "Despesas por Responsável" : "Resumo por Conta"}
+              {groupBy === "none" ? "Extrato Detalhado" : groupBy === "category" ? "Despesas por Categoria" : groupBy === "responsible" ? "Despesas por Responsável" : "Resumo por Conta"}
             </h3>
             
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tl-xl hidden">ID</th>
-                  <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tl-xl">
-                    {groupBy === "category" ? "Categoria" : groupBy === "responsible" ? "Responsável" : "Conta"}
-                  </th>
-                  <th className="py-3 px-4 bg-zinc-100 text-right text-xs font-bold uppercase tracking-widest text-zinc-500">Transações</th>
-                  <th className="py-3 px-4 bg-zinc-100 text-right text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tr-xl">Valor Total</th>
+                  {groupBy === "none" ? (
+                    <>
+                      <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tl-xl w-[20%]">Data</th>
+                      <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 w-[35%]">Descrição</th>
+                      <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 w-[25%]">Categoria/Ref.</th>
+                      <th className="py-3 px-4 bg-zinc-100 text-right text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tr-xl w-[20%]">Valor</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tl-xl hidden">ID</th>
+                      <th className="py-3 px-4 bg-zinc-100 text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tl-xl">
+                        {groupBy === "category" ? "Categoria" : groupBy === "responsible" ? "Responsável" : "Conta"}
+                      </th>
+                      <th className="py-3 px-4 bg-zinc-100 text-right text-xs font-bold uppercase tracking-widest text-zinc-500">Transações</th>
+                      <th className="py-3 px-4 bg-zinc-100 text-right text-xs font-bold uppercase tracking-widest text-zinc-500 rounded-tr-xl">Valor Total</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {listData.map((row, index) => {
+                  if (groupBy === "none") {
+                    return (
+                      <tr key={index} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50">
+                        <td className="py-3 px-4 text-sm font-semibold text-zinc-600">
+                          {new Date(row.date).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-zinc-800 truncate max-w-[200px]" title={row.description}>
+                          {row.description}
+                        </td>
+                        <td className="py-3 px-4 text-xs font-medium text-zinc-500">{row.categoryName}</td>
+                        <td className={`py-3 px-4 text-sm font-black text-right ${row.type === 'EXPENSE' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {formatCurrency(row.amount)}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Agrupado
                   const label = row.categoryName || row.responsibleName || row.accountName || "N/A";
                   return (
                     <tr key={index} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50">
@@ -92,7 +131,7 @@ export const ReportTemplate = React.forwardRef<HTMLDivElement, ReportTemplatePro
         )}
 
         {/* Empty State */}
-        {groupBy !== "none" && listData && listData.length === 0 && (
+        {listData && listData.length === 0 && (
           <div className="py-10 text-center text-zinc-400 font-medium">
             Nenhum dado encontrado para os filtros selecionados.
           </div>

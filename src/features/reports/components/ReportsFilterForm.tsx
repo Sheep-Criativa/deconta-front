@@ -25,10 +25,12 @@ import { reportFilterSchema, type ReportFilterFilters } from "../services/report
 
 export interface FormFilterData extends ReportFilterFilters {
   groupBy: "none" | "category" | "responsible" | "account";
+  customDateRangeLabel?: string;
 }
 
 const uiFilterSchema = reportFilterSchema.extend({
   groupBy: z.enum(["none", "category", "responsible", "account"]),
+  layoutMode: z.enum(["COMPLETE", "SIMPLE"]).default("COMPLETE"),
 });
 
 interface ReportsFilterFormProps {
@@ -59,6 +61,7 @@ export function ReportsFilterForm({
       responsibleId: undefined,
       type: undefined,
       status: undefined,
+      layoutMode: "COMPLETE",
     },
   });
 
@@ -82,6 +85,28 @@ export function ReportsFilterForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmitFilters)} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
+
+            {/* Layout Mode */}
+            <FormField
+              control={form.control}
+              name="layoutMode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Estilo Visual</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium font-zinc-900 border-l-4 border-l-emerald-500">
+                        <SelectValue placeholder="Completo (Gerencial)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                      <SelectItem value="COMPLETE" className="font-medium">Completo (Gerencial)</SelectItem>
+                      <SelectItem value="SIMPLE" className="font-medium">Simples (Extrato/Recibo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
             
             {/* Group By */}
             <FormField

@@ -30,6 +30,18 @@ export interface GetByAccountResponse {
   count: number;
 }
 
+export interface GetDetailedResponse {
+  id: number;
+  description: string;
+  amount: number;
+  date: string;
+  type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
+  status: "PENDING" | "CONFIRMED" | "RECONCILED";
+  categoryName: string;
+  responsibleName: string;
+  accountName: string;
+}
+
 // Zod Schema for the filter form (adapted from backend getReportSchema)
 export const reportFilterSchema = z.object({
   startDate: z.string().optional(),
@@ -39,6 +51,8 @@ export const reportFilterSchema = z.object({
   responsibleId: z.coerce.number().optional(),
   type: z.enum(["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"]).optional(),
   status: z.enum(["PENDING", "CONFIRMED", "RECONCILED"]).optional(),
+  layoutMode: z.enum(["COMPLETE", "SIMPLE"]).optional().default("COMPLETE"),
+  accountType: z.string().optional(),
 });
 
 export type ReportFilterFilters = z.infer<typeof reportFilterSchema>;
@@ -83,8 +97,14 @@ export async function getByAccountReport(userId: number, filters?: ReportFilterF
   return response.data;
 }
 
+export async function getDetailedReport(userId: number, filters?: ReportFilterFilters): Promise<GetDetailedResponse[]> {
+  const query = buildQueryString(filters);
+  const response = await api.get(`/reports/detailed/${userId}${query}`);
+  return response.data;
+}
+
 export async function downloadPdfReport(userId: number, payload: any): Promise<Blob> {
-  
+
   const response = await api.post(
     `/reports/download-pdf/${userId}`,
     payload,
