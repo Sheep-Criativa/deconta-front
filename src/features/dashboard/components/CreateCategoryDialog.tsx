@@ -32,7 +32,7 @@ import {
   ShoppingCart, Home, Car, Utensils, Smartphone, Heart, GraduationCap,
   Gamepad2, Plane, Zap, Fuel, Laptop, Shirt, Gift, Film, Dumbbell,
   PawPrint, Sparkles, Trees, Wallet, TrendingUp, Briefcase, Music,
-  Coffee, Bus, BookOpen, Baby, Wrench, Globe,
+  Coffee, Bus, BookOpen, Baby, Wrench, Globe
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

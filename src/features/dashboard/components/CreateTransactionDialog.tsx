@@ -27,6 +27,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
+import {
+  ShoppingCart, Home, Car, Utensils, Smartphone, Heart, GraduationCap,
+  Gamepad2, Plane, Zap, Fuel, Laptop, Shirt, Gift, Film, Dumbbell,
+  PawPrint, Sparkles, Trees, Wallet, TrendingUp, Briefcase, Music,
+  Coffee, Bus, BookOpen, Baby, Wrench, Globe
+} from "lucide-react";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
@@ -88,8 +95,8 @@ export function CreateTransactionDialog({
     defaultValues: {
       type: defaultType,
       status: "CONFIRMED",
-      date: new Date().toISOString().split("T")[0],
-      paymentDate: new Date().toISOString().split("T")[0],
+      date: format(new Date(), "yyyy-MM-dd"),
+      paymentDate: format(new Date(), "yyyy-MM-dd"),
       amount: 0,
       installmentTotal: 1,
       description: "",
@@ -174,8 +181,8 @@ export function CreateTransactionDialog({
         form.reset({
           type: defaultType,
           status: "CONFIRMED",
-          date: new Date().toISOString().split("T")[0],
-          paymentDate: new Date().toISOString().split("T")[0],
+          date: format(new Date(), "yyyy-MM-dd"),
+          paymentDate: format(new Date(), "yyyy-MM-dd"),
           amount: 0,
           installmentTotal: 1,
           description: "",
@@ -263,15 +270,23 @@ export function CreateTransactionDialog({
         }
       }
 
-      const baseDate = new Date(values.date + "T12:00:00");
-      const basePaymentDate = new Date(values.paymentDate + "T12:00:00");
+      // Se for cartão de crédito, o paymentDate original da UI é desnecessário.
+      // O valor da transação deve ser dividido pelas parcelas. 
+      const submitDate = values.date;
+      const submitPaymentDate = isCreditCard ? values.date : values.paymentDate;
+      const finalAmount = (isCreditCard && values.installmentTotal && values.installmentTotal > 1)
+        ? Number((values.amount / values.installmentTotal).toFixed(2))
+        : values.amount;
+
+      const baseDate = new Date(submitDate + "T12:00:00");
+      const basePaymentDate = new Date(submitPaymentDate + "T12:00:00");
 
       if (isEditMode && transaction) {
         await updateTransaction(transaction.id, {
           categoryId: resolvedCategoryId,
           responsibleId: resolvedRespId,
           description: values.description || undefined,
-          amount: values.amount,
+          amount: finalAmount,
           date: baseDate,
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
@@ -285,7 +300,7 @@ export function CreateTransactionDialog({
           categoryId: resolvedCategoryId!,
           responsibleId: resolvedRespId!,
           description: values.description || undefined,
-          amount: values.amount,
+          amount: finalAmount,
           date: baseDate,
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
@@ -548,7 +563,7 @@ export function CreateTransactionDialog({
             />
 
             {/* Dates row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 gap-4 ${isCreditCard ? "" : "sm:grid-cols-2"}`}>
               <FormField
                 control={form.control}
                 name="date"
@@ -565,21 +580,23 @@ export function CreateTransactionDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="paymentDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">
-                      {isCreditCard ? "Data 1ª Parcela" : "Data de Pagamento"}
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="date" className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!isCreditCard && (
+                <FormField
+                  control={form.control}
+                  name="paymentDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                        Data de Pagamento
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             {/* Credit Card: Installments */}
@@ -618,9 +635,10 @@ export function CreateTransactionDialog({
                       />
                     </div>
                     {field.value && field.value > 1 && (
-                      <p className="text-[11px] text-zinc-400 font-medium mt-1">
-                        {field.value}x de R$ {(Number(form.watch("amount")) / field.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </p>
+                      <div className="text-[11px] text-zinc-500 mt-2 font-medium bg-zinc-50 p-2 rounded-lg border border-zinc-100 flex justify-between items-center">
+                        <span>{field.value}x de R$ {(Number(form.watch("amount")) / field.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                        <span className="text-emerald-600 hidden sm:inline">Divisão inteligente (Automática)</span>
+                      </div>
                     )}
                     <FormMessage />
                   </FormItem>
