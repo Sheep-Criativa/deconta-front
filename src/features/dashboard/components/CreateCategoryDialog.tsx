@@ -37,15 +37,31 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 // ─── Icon registry ──────────────────────────────────────────────────────────────
+export const DecontaTagIcon = (props: any) => {
+  return (
+    <img 
+      src="/images/simbolo-logo.png" 
+      alt="deConta tag" 
+      style={{ 
+        width: props.size || 18, 
+        height: props.size || 18,
+        transform: 'scale(1.5)',
+      }} 
+      className="object-contain brightness-0 invert" 
+    />
+  );
+};
+
 // Key = stored value in DB, Value = Lucide component
-export const ICON_MAP: Record<string, LucideIcon> = {
+export const ICON_MAP: Record<string, any> = {
   ShoppingCart, Home, Car, Utensils, Smartphone, Heart, GraduationCap,
   Gamepad2, Plane, Zap, Fuel, Laptop, Shirt, Gift, Film, Dumbbell,
   PawPrint, Sparkles, Trees, Wallet, TrendingUp, Briefcase, Music,
   Coffee, Bus, BookOpen, Baby, Wrench, Globe,
+  Tag: DecontaTagIcon,
 };
 
-export const PRESET_ICON_KEYS = Object.keys(ICON_MAP) as (keyof typeof ICON_MAP)[];
+export const PRESET_ICON_KEYS = Object.keys(ICON_MAP).filter(k => k !== "Tag");
 
 const formSchema = z.object({
   name:  z.string().min(3, "O nome deve ter pelo menos 3 caracteres").max(100),

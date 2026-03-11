@@ -322,8 +322,6 @@ export function CreateTransactionDialog({
   const typeConfig = {
     INCOME:     { label: "Receita",     color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: ArrowUpCircle },
     EXPENSE:    { label: "Despesa",     color: "text-rose-600 bg-rose-50 border-rose-200",           icon: ArrowDownCircle },
-    TRANSFER:   { label: "Transferência", color: "text-blue-600 bg-blue-50 border-blue-200",         icon: Repeat },
-    ADJUSTMENT: { label: "Ajuste",      color: "text-amber-600 bg-amber-50 border-amber-200",        icon: CreditCard },
   };
 
   return (
