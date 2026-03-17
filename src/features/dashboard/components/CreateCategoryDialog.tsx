@@ -34,7 +34,7 @@ import {
   PawPrint, Sparkles, Trees, Wallet, TrendingUp, Briefcase, Music,
   Coffee, Bus, BookOpen, Baby, Wrench, Globe
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+
 
 // ─── Icon registry ──────────────────────────────────────────────────────────────
 export const DecontaTagIcon = (props: any) => {
