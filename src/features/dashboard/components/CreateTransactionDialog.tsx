@@ -25,15 +25,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Repeat, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
-import {
-  ShoppingCart, Home, Car, Utensils, Smartphone, Heart, GraduationCap,
-  Gamepad2, Plane, Zap, Fuel, Laptop, Shirt, Gift, Film, Dumbbell,
-  PawPrint, Sparkles, Trees, Wallet, TrendingUp, Briefcase, Music,
-  Coffee, Bus, BookOpen, Baby, Wrench, Globe
-} from "lucide-react";
+
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
@@ -373,7 +368,7 @@ export function CreateTransactionDialog({
                   <FormItem>
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Tipo</FormLabel>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {(Object.keys(typeConfig) as TransactionType[]).map(t => {
+                      {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map(t => {
                         const cfg = typeConfig[t];
                         const Icon = cfg.icon;
                         const active = field.value === t;
