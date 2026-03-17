@@ -34,7 +34,6 @@ const typeConfig: Record<string, { label: string; color: string; bg: string; ico
   INCOME:     { label: "Receita",       color: "text-emerald-600", bg: "bg-emerald-50",  icon: ArrowUpCircle   },
   EXPENSE:    { label: "Despesa",       color: "text-rose-600",    bg: "bg-rose-50",      icon: ArrowDownCircle },
   TRANSFER:   { label: "Transferência", color: "text-blue-600",    bg: "bg-blue-50",      icon: ArrowUpCircle   },
-  ADJUSTMENT: { label: "Ajuste",        color: "text-amber-600",   bg: "bg-amber-50",     icon: ArrowUpCircle   },
 };
 
 const statusBadge: Record<string, string> = {

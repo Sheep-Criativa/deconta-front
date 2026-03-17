@@ -6,6 +6,7 @@ import { type Account, AccountType, getAccounts, deleteAccount } from "../servic
 import { getTransactions, type Transaction } from "../services/transaction.service";
 import { AccountCard } from "../components/AccountCard";
 import { CreateAccountDialog } from "../components/CreateAccountDialog";
+import { CreateTransferDialog } from "../components/CreateTransferDialog";
 import { toast } from "sonner";
 import { buildBalanceMap } from "../utils/balanceUtils";
 
@@ -16,6 +17,7 @@ export default function Accounts() {
   const [loading,      setLoading]      = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [transferringAccount, setTransferringAccount] = useState<Account | null>(null);
 
   async function fetchData() {
     if (!user) return;
@@ -89,6 +91,7 @@ export default function Accounts() {
                   computedBalance={balanceMap.get(account.id)}
                   onEdit={handleEdit} 
                   onDelete={handleDelete} 
+                  onTransfer={setTransferringAccount}
                />
             ))}
             
@@ -110,6 +113,13 @@ export default function Accounts() {
         editingAccount={editingAccount}
         onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
         onSuccess={() => { setEditingAccount(null); fetchData(); }}
+      />
+      <CreateTransferDialog
+        open={!!transferringAccount}
+        onOpenChange={(open) => { if (!open) setTransferringAccount(null); }}
+        onSuccess={() => { setTransferringAccount(null); fetchData(); }}
+        originAccount={transferringAccount}
+        accounts={accounts}
       />
     </div>
   );

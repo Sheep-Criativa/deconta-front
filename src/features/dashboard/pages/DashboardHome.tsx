@@ -568,15 +568,16 @@ export default function DashboardHome() {
                 )
               ) : (
                 ccAccounts.length > 0 ? ccAccounts.map(acc => {
-                  const openStmt = statements.find(
-                    s => s.accountId === acc.id &&
-                    (s.status.trim() === "OPEN" || s.status.trim() === "CLOSED")
-                  );
+                  const stmtRecords = statements.filter(s => s.accountId === acc.id);
+                  const unpaidAmount = stmtRecords
+                    .filter(s => s.status.trim() !== "PAID")
+                    .reduce((sum, s) => sum + Number(s.totalAmount ?? 0), 0);
+                  
                   return (
                     <CreditMiniCard
                       key={acc.id}
                       account={acc}
-                      statementAmount={openStmt ? Number(openStmt.totalAmount) : null}
+                      statementAmount={unpaidAmount > 0 ? unpaidAmount : null}
                     />
                   );
                 }) : (

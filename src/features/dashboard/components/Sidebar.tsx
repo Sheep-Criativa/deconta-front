@@ -8,6 +8,7 @@ import {
   CircleHelp,
   LogOut,
   Users,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,6 +19,7 @@ const navItems = [
   { icon: Users,           path: "/responsibles", label: "Responsáveis", id: "tour-sidebar-responsibles" },
   { icon: Tag,             path: "/categories",   label: "Categorias",   id: "tour-sidebar-categories" },
   { icon: History,         path: "/history",      label: "Histórico",    id: "tour-sidebar-history" },
+  { icon: FileText,        path: "/reports",      label: "Relatórios",   id: "tour-sidebar-reports" },
 ];
 
 export default function Sidebar() {

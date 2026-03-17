@@ -218,8 +218,10 @@ function OverviewPanel({ cards, allStmts, allTxs, responsibles, categories, navi
   // ── Aggregates ──
   const totalLimit     = cards.reduce((s, c) => s + Number(c.limitAmount ?? 0), 0);
   const totalUsed      = cards.reduce((s, c) => {
-    const open = (allStmts[c.id] ?? []).find(st => st.status.trim() === "OPEN" || st.status.trim() === "CLOSED");
-    return s + Number(open?.totalAmount ?? 0);
+    const stmts = allStmts[c.id] ?? [];
+    // Qualquer fatura que não esteja PAGA ocupa limite do cartão (faturas futuras também).
+    const unpaid = stmts.filter(st => st.status.trim() !== "PAID").reduce((sum, st) => sum + Number(st.totalAmount ?? 0), 0);
+    return s + unpaid;
   }, 0);
   const totalAvailable = totalLimit - totalUsed;
 
@@ -281,8 +283,8 @@ function OverviewPanel({ cards, allStmts, allTxs, responsibles, categories, navi
         <div className="bg-white rounded-3xl p-5 border border-zinc-100 space-y-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Por Cartão</p>
           {cards.map(card => {
-            const open = (allStmts[card.id] ?? []).find(st => st.status.trim() === "OPEN" || st.status.trim() === "CLOSED");
-            const used = Number(open?.totalAmount ?? 0);
+            const stmts = allStmts[card.id] ?? [];
+            const used = stmts.filter(st => st.status.trim() !== "PAID").reduce((sum, st) => sum + Number(st.totalAmount ?? 0), 0);
             const lim  = Number(card.limitAmount ?? 0);
             const pct  = lim > 0 ? Math.min((used / lim) * 100, 100) : 0;
             return (
@@ -498,8 +500,7 @@ export default function CreditCards() {
 
   // Per-card detail values
   const stmts         = allStmts[selectedCard?.id ?? -1] ?? [];
-  const openStatement = stmts.find(s => s.status.trim() === "OPEN");
-  const usedAmount    = openStatement?.totalAmount ?? 0;
+  const usedAmount    = stmts.filter(s => s.status.trim() !== "PAID").reduce((sum, s) => sum + Number(s.totalAmount ?? 0), 0);
   const totalLimit    = selectedCard?.limitAmount ?? 0;
   const availableLimit = totalLimit - usedAmount;
   const upcomingStmts = stmts.filter(s => s.status.trim() !== "PAID").slice(0, 3);

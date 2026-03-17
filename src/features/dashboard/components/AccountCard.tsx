@@ -1,6 +1,6 @@
 import { BaseCard } from "@/features/dashboard/components/BaseCard";
 import { type Account, AccountType } from "../services/account.service";
-import { Building, CreditCard, Banknote, TrendingUp, MoreVertical, Edit, Trash } from "lucide-react";
+import { Building, CreditCard, Banknote, TrendingUp, MoreVertical, Edit, Trash, Repeat } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ interface AccountCardProps {
   account: Account;
   onEdit: (account: Account) => void;
   onDelete: (id: number) => void;
+  onTransfer?: (account: Account) => void;
   computedBalance?: number;
 }
 
@@ -30,7 +31,7 @@ const typeLabels = {
   [AccountType.INVESTMENT]: "Investimento",
 };
 
-export function AccountCard({ account, onEdit, onDelete, computedBalance }: AccountCardProps) {
+export function AccountCard({ account, onEdit, onDelete, onTransfer, computedBalance }: AccountCardProps) {
   const Icon    = typeIcons[account.type.trim() as AccountType] ?? Building;
   const balance = computedBalance ?? account.currentBalance;
 
@@ -58,6 +59,12 @@ export function AccountCard({ account, onEdit, onDelete, computedBalance }: Acco
               <Edit className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
+            {onTransfer && account.type !== AccountType.CREDIT_CARD && (
+              <DropdownMenuItem onClick={() => onTransfer(account)} className="text-blue-600 focus:text-blue-600">
+                <Repeat className="mr-2 h-4 w-4" />
+                Transferência
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onDelete(account.id)} className="text-red-600 focus:text-red-600">
               <Trash className="mr-2 h-4 w-4" />
               Excluir
