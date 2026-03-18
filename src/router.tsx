@@ -16,6 +16,8 @@ import { ReportsPage } from "@/features/reports/pages/ReportsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 
+import Landing from "@/features/landing/pages/Landing";
+
 function AuthLayout() {
   return (
     <AuthProvider>
@@ -28,6 +30,7 @@ export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
     children: [
+      { path: "/", element: <Landing /> },
       { path: "/register", element: <Register /> },
       { path: "/login",    element: <Login /> },
 
