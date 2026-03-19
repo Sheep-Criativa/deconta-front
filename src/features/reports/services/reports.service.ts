@@ -113,3 +113,8 @@ export async function downloadPdfReport(userId: number, payload: any): Promise<B
 
   return response.data;
 }
+
+export async function sendReportByEmail(payload: any): Promise<void> {
+  const response = await api.post('/reports/send-email', payload);
+  return response.data;
+}
