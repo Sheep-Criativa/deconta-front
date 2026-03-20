@@ -4,9 +4,21 @@ import { ReportsFilterForm, type FormFilterData } from "../components/ReportsFil
 import { CreditCardReportsFilterForm } from "../components/CreditCardReportsFilterForm";
 import { ReportTemplate } from "../components/ReportTemplate";
 import { BaseCard } from "@/features/dashboard/components/BaseCard";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 import { getAccounts, type Account } from "@/features/dashboard/services/account.service";
 import { getCategories, type Category } from "@/features/dashboard/services/category.service";
@@ -19,6 +31,7 @@ import {
   getByAccountReport,
   getDetailedReport,
   downloadPdfReport,
+  sendReportByEmail,
   type GetSummaryResponse,
 } from "../services/reports.service";
 
@@ -39,6 +52,14 @@ export function ReportsPage() {
   const [summaryData, setSummaryData] = useState<GetSummaryResponse | undefined>(undefined);
   const [listData, setListData] = useState<any[] | undefined>(undefined);
   const [hasData, setHasData] = useState(false);
+  
+  // Current loaded filters
+  const [currentFilters, setCurrentFilters] = useState<FormFilterData | null>(null);
+
+  // Email Modal State
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailToSend, setEmailToSend] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   
   // Tab State
   const [activeTab, setActiveTab] = useState<"GENERAL" | "CREDIT_CARD">("GENERAL");
@@ -103,6 +124,7 @@ export function ReportsPage() {
         setReportDateRange("Período Geral (Todo o histórico)");
       }
 
+      setCurrentFilters(filters);
       setHasData(true);
       toast.success("Dados do relatório carregados com sucesso!");
 
@@ -163,6 +185,55 @@ export function ReportsPage() {
     }
   };
 
+  const handleOpenEmailModal = () => {
+    if (!hasData || !currentFilters) {
+      toast.error("Gere os dados do relatório primeiro para enviar por e-mail.");
+      return;
+    }
+    setIsEmailModalOpen(true);
+  };
+
+  const handleSendEmailSubmit = async () => {
+    if (!user || !emailToSend) return;
+    setIsSendingEmail(true);
+
+    try {
+      // Garante que amount e total sejam convertidos para número, 
+      // caso a API tenha retornado como string (ex: DECIMAL do banco)
+      const formattedListData = listData?.map((item: any) => ({
+        ...item,
+        ...(item.amount !== undefined && { amount: Number(item.amount) }),
+        ...(item.total !== undefined && { total: Number(item.total) })
+      }));
+
+      const payload = {
+        userId: user.id,
+        email: emailToSend,
+        summaryData: {
+          ...summaryData,
+          ...(summaryData?.totalIncome !== undefined && { totalIncome: Number(summaryData.totalIncome) }),
+          ...(summaryData?.totalExpense !== undefined && { totalExpense: Number(summaryData.totalExpense) }),
+          ...(summaryData?.netBalance !== undefined && { netBalance: Number(summaryData.netBalance) }),
+        },
+        listData: formattedListData,
+        groupBy: currentGroupBy,
+        layoutMode: currentLayoutMode,
+        reportDateRange,
+        userName: user?.name || "Usuário"
+      };
+
+      await sendReportByEmail(payload);
+      toast.success("Relatório enviado com sucesso!");
+      setIsEmailModalOpen(false);
+      setEmailToSend("");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.error || "Erro ao enviar relatório por e-mail.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   if (loadingInitial) {
     return (
       <div className="flex-1 flex flex-col p-4 sm:p-8 min-h-screen bg-zinc-50 items-center justify-center">
@@ -218,6 +289,7 @@ export function ReportsPage() {
               onSubmitFilters={handleGenerateData}
               isLoading={loadingData}
               onExportPdf={handleExportPdf}
+              onSendEmail={handleOpenEmailModal}
             />
           ) : (
             <CreditCardReportsFilterForm
@@ -227,6 +299,7 @@ export function ReportsPage() {
               onSubmitFilters={handleGenerateData}
               isLoading={loadingData}
               onExportPdf={handleExportPdf}
+              onSendEmail={handleOpenEmailModal}
             />
           )}
 
@@ -263,6 +336,59 @@ export function ReportsPage() {
         </div>
 
       </div>
+
+      {/* Email Modal */}
+      <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Enviar Relatório por E-mail</DialogTitle>
+            <DialogDescription>
+              Informe o endereço de e-mail para o qual deseja enviar este relatório gerado em anexo (PDF).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right font-medium">
+                E-mail
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="exemplo@email.com"
+                className="col-span-3"
+                value={emailToSend}
+                onChange={(e) => setEmailToSend(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEmailModalOpen(false)}
+              disabled={isSendingEmail}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendEmailSubmit}
+              disabled={isSendingEmail || !emailToSend}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSendingEmail ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar E-mail
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

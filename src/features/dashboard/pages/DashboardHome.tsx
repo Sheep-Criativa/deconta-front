@@ -98,7 +98,7 @@ function BalanceCard({ accounts, transactions }: { accounts: Account[]; transact
 
       {/* Big value */}
       <div>
-        <h2 className={`text-2xl font-black tracking-tight ${total >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
+        <h2 className={`text-2xl font-bold tracking-tight ${total >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
           {fmt(total)}
         </h2>
         <p className="text-xs text-zinc-400 font-medium mt-0.5">
@@ -165,12 +165,12 @@ function RecentTxRow({
         })()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-zinc-800 truncate">
+        <p className="text-sm font-semibold text-zinc-800 truncate">
           {tx.description || cat?.name || (isExpense ? "Despesa" : "Receita")}
         </p>
         <p className="text-[10px] text-zinc-400 font-medium">{acc?.name} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>
       </div>
-      <span className={`text-sm font-black flex-shrink-0 ${isExpense ? "text-zinc-800" : "text-emerald-600"}`}>
+      <span className={`text-sm font-semibold flex-shrink-0 ${isExpense ? "text-zinc-800" : "text-emerald-600"}`}>
         {isExpense ? "-" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
       </span>
     </div>
@@ -194,7 +194,7 @@ function AccountMiniCard({ account, computedBalance }: { account: Account; compu
       <p className="text-[9px] font-black uppercase tracking-widest opacity-60">{typeLabel}</p>
       <p className="text-sm font-bold mt-0.5 truncate">{account.name}</p>
       <p className="text-[9px] font-bold opacity-50 mt-3 uppercase tracking-widest">Saldo disponível</p>
-      <p className="text-xl font-black mt-0.5">
+      <p className="text-xl font-bold mt-0.5">
         R$ {computedBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
       </p>
     </div>
@@ -211,7 +211,7 @@ function CreditMiniCard({ account, statementAmount }: { account: Account; statem
       {statementAmount !== null ? (
         <>
           <p className="text-[9px] font-bold opacity-40 mt-3 uppercase tracking-widest">Fatura aberta</p>
-          <p className="text-xl font-black mt-0.5 text-emerald-400">
+          <p className="text-xl font-bold mt-0.5 text-emerald-400">
             R$ {statementAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </p>
         </>
@@ -362,7 +362,7 @@ export default function DashboardHome() {
             </button>
           </div>
           <div>
-            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{fmt(monthIncome)}</h2>
+            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">{fmt(monthIncome)}</h2>
             <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
           </div>
           <div className={`flex items-center gap-1 text-[11px] font-bold ${incomeTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
@@ -384,7 +384,7 @@ export default function DashboardHome() {
             </button>
           </div>
           <div>
-            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{fmt(monthExpense)}</h2>
+            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">{fmt(monthExpense)}</h2>
             <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
           </div>
           <div className={`flex items-center gap-1 text-[11px] font-bold ${expenseTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
@@ -405,7 +405,7 @@ export default function DashboardHome() {
           <BaseCard id="tour-dashboard-flow" className="rounded-3xl border border-zinc-100 shadow-none">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="text-sm font-black text-zinc-900">Fluxo de Caixa</h3>
+                <h3 className="text-sm font-bold text-zinc-900">Fluxo de Caixa</h3>
                 <p className="text-[11px] text-zinc-400 font-medium">Últimos 6 meses</p>
               </div>
             </div>
@@ -429,7 +429,7 @@ export default function DashboardHome() {
                 <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
                   <List size={14} />
                 </div>
-                <h3 className="text-sm font-black text-zinc-900">Últimas Transações</h3>
+                <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
               </div>
               <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
                 Ver todas →
@@ -450,7 +450,7 @@ export default function DashboardHome() {
 
           {/* Donut: Gastos por Categoria */}
           <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
-            <h3 className="text-sm font-black text-zinc-900 mb-4">Gastos por Categoria</h3>
+            <h3 className="text-sm font-bold text-zinc-900 mb-4">Gastos por Categoria</h3>
             {categoryData.length === 0 ? (
               <p className="text-xs text-zinc-400 text-center py-8">Sem dados este mês.</p>
             ) : (
@@ -483,7 +483,7 @@ export default function DashboardHome() {
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color || `hsl(${i * 55}, 65%, 55%)` }} />
                         <span className="text-[11px] font-bold text-zinc-600 truncate max-w-[120px]">{c.name}</span>
                       </div>
-                      <span className="text-[11px] font-black text-zinc-800">
+                      <span className="text-[11px] font-bold text-zinc-800">
                         R$ {c.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -500,7 +500,7 @@ export default function DashboardHome() {
                 <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
                   <CreditCard size={14} />
                 </div>
-                <h3 className="text-sm font-black text-zinc-900">Faturas Abertas</h3>
+                <h3 className="text-sm font-bold text-zinc-900">Faturas Abertas</h3>
               </div>
               <div className="space-y-3">
                 {openStatements.slice(0, 3).map(s => {
@@ -509,13 +509,13 @@ export default function DashboardHome() {
                   return (
                     <div key={s.id} className={`flex items-center justify-between p-3 rounded-2xl ${isOpen ? "bg-emerald-50" : "bg-amber-50"}`}>
                       <div>
-                        <p className="text-xs font-black text-zinc-900">{acc?.name ?? "Cartão"}</p>
+                        <p className="text-xs font-bold text-zinc-900">{acc?.name ?? "Cartão"}</p>
                         <p className="text-[10px] text-zinc-500 font-medium">
                           Vence {format(parseISO(s.dueDate), "dd/MM")}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-black ${isOpen ? "text-emerald-700" : "text-amber-700"}`}>
+                        <p className={`text-sm font-bold ${isOpen ? "text-emerald-700" : "text-amber-700"}`}>
                           R$ {Number(s.totalAmount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </p>
                         <p className={`text-[10px] font-bold ${isOpen ? "text-emerald-500" : "text-amber-500"}`}>
@@ -533,14 +533,14 @@ export default function DashboardHome() {
           <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
             {/* Header + tabs */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-zinc-900">Suas Contas</h3>
+              <h3 className="text-sm font-bold text-zinc-900">Suas Contas</h3>
               <div className="flex items-center gap-4">
                 <div className="flex bg-zinc-100 rounded-full p-0.5 gap-0.5">
                   {(["contas", "credito"] as const).map(tab => (
                     <button
                       key={tab}
                       onClick={() => setAccountTab(tab)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
                         accountTab === tab
                           ? "bg-white text-zinc-900 shadow-sm"
                           : "text-zinc-400 hover:text-zinc-600"

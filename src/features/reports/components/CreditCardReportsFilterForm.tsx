@@ -21,7 +21,7 @@ import { type Account } from "@/features/dashboard/services/account.service";
 import { type Category } from "@/features/dashboard/services/category.service";
 import { type Responsible } from "@/features/dashboard/services/responsible.service";
 import { getStatements, type Statement } from "@/features/dashboard/services/credit-card.service";
-import { FileText, Loader2, CreditCard } from "lucide-react";
+import { FileText, Loader2, CreditCard, Mail } from "lucide-react";
 import { type FormFilterData } from "./ReportsFilterForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +46,7 @@ interface CreditCardReportsFilterFormProps {
   onSubmitFilters: (filters: FormFilterData) => void;
   isLoading: boolean;
   onExportPdf: () => void;
+  onSendEmail: () => void;
 }
 
 export function CreditCardReportsFilterForm({
@@ -55,6 +56,7 @@ export function CreditCardReportsFilterForm({
   onSubmitFilters,
   isLoading,
   onExportPdf,
+  onSendEmail,
 }: CreditCardReportsFilterFormProps) {
   
   const creditCards = accounts.filter(a => a.type === "CREDIT_CARD");
@@ -161,19 +163,32 @@ export function CreditCardReportsFilterForm({
 
   return (
     <div className="bg-white p-6 rounded-b-3xl rounded-tr-3xl border border-zinc-100 shadow-sm w-full">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">
-          <CreditCard size={18} className="text-indigo-500" /> Relatório de Fatura
+          <CreditCard size={18} className="text-indigo-500 shrink-0" /> Relatório de Fatura
         </h3>
-        <Button 
-          variant="outline" 
-          onClick={onExportPdf}
-          disabled={isLoading}
-          className="rounded-xl font-bold bg-white text-indigo-600 border-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-all shadow-sm"
-        >
-          <FileText size={16} className="mr-2" />
-          Exportar Fatura PDF
-        </Button>
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={onSendEmail}
+            disabled={isLoading}
+            className="rounded-xl font-bold bg-white text-blue-600 border-zinc-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm w-full"
+          >
+            <Mail size={16} className="mr-2 shrink-0" />
+            E-mail
+          </Button>
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={onExportPdf}
+            disabled={isLoading}
+            className="rounded-xl font-bold bg-white text-indigo-600 border-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-all shadow-sm w-full truncate"
+          >
+            <FileText size={16} className="mr-2 shrink-0" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       <Form {...form}>

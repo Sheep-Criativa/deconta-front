@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { type Account } from "@/features/dashboard/services/account.service";
 import { type Category } from "@/features/dashboard/services/category.service";
 import { type Responsible } from "@/features/dashboard/services/responsible.service";
-import { Filter, FileText } from "lucide-react";
+import { Filter, FileText, Mail } from "lucide-react";
 import { reportFilterSchema, type ReportFilterFilters } from "../services/reports.service";
 
 export interface FormFilterData extends ReportFilterFilters {
@@ -40,6 +40,7 @@ interface ReportsFilterFormProps {
   onSubmitFilters: (filters: FormFilterData) => void;
   isLoading: boolean;
   onExportPdf: () => void;
+  onSendEmail: () => void;
 }
 
 export function ReportsFilterForm({
@@ -49,6 +50,7 @@ export function ReportsFilterForm({
   onSubmitFilters,
   isLoading,
   onExportPdf,
+  onSendEmail,
 }: ReportsFilterFormProps) {
   const form = useForm<FormFilterData>({
     resolver: zodResolver(uiFilterSchema) as any,
@@ -67,19 +69,32 @@ export function ReportsFilterForm({
 
   return (
     <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm w-full">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         <h3 className="text-lg font-black text-zinc-900 flex items-center gap-2">
-          <Filter size={18} className="text-emerald-500" /> Filtros do Relatório
+          <Filter size={18} className="text-emerald-500 shrink-0" /> Filtros do Relatório
         </h3>
-        <Button 
-          variant="outline" 
-          onClick={onExportPdf}
-          disabled={isLoading}
-          className="rounded-xl font-bold bg-white text-emerald-600 border-zinc-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm"
-        >
-          <FileText size={16} className="mr-2" />
-          Exportar PDF
-        </Button>
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={onSendEmail}
+            disabled={isLoading}
+            className="rounded-xl font-bold bg-white text-blue-600 border-zinc-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm w-full"
+          >
+            <Mail size={16} className="mr-2 shrink-0" />
+            E-mail
+          </Button>
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={onExportPdf}
+            disabled={isLoading}
+            className="rounded-xl font-bold bg-white text-emerald-600 border-zinc-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm w-full"
+          >
+            <FileText size={16} className="mr-2 shrink-0" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       <Form {...form}>
