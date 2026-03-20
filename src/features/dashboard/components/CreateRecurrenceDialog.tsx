@@ -98,7 +98,7 @@ export function CreateRecurrenceDialog({
   const [categories, setCategories] = useState<Category[]>([]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       type: defaultType,
       amount: 0,
