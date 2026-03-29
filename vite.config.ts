@@ -11,4 +11,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/n8n-chat': {
+        target: 'https://n8n-m287.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/n8n-chat/, ''),
+      },
+    },
+  },
 })
