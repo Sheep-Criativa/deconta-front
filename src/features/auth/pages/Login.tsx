@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { GoogleLogin } from '@react-oauth/google';
+import { Eye, EyeOff } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "../components/AuthLayout";
@@ -38,6 +39,7 @@ export default function Login() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login, loginWithGoogle } = useAuth(); // Using context
 
@@ -137,11 +139,20 @@ export default function Login() {
               <label className="text-sm font-semibold text-zinc-800">
                 Senha
               </label>
-              <Input
-                type="password"
-                className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900"
-                name="passwordHash"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  className="h-11 rounded-lg bg-white border-zinc-300 text-zinc-900 pr-10"
+                  name="passwordHash"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {errors.passwordHash && (
                 <p className="text-sm text-red-500 mt-1">
                   {errors.passwordHash}

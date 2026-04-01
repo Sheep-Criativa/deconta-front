@@ -11,7 +11,7 @@ interface ChatMessage {
 }
 
 // Utilizamos o proxy do Vite (/n8n-chat) para não dar erro de CORS rodando em localhost:
-const WEBHOOK_URL = "/n8n-chat/webhook-test/6be7dda6-8d84-4d59-a841-9206d7d28ebd";
+const WEBHOOK_URL = "/n8n-chat/webhook-test/chat";
 
 export function ChatWidget() {
   const { user } = useAuth();
