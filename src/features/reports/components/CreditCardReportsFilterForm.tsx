@@ -21,7 +21,7 @@ import { type Account } from "@/features/dashboard/services/account.service";
 import { type Category } from "@/features/dashboard/services/category.service";
 import { type Responsible } from "@/features/dashboard/services/responsible.service";
 import { getStatements, type Statement } from "@/features/dashboard/services/credit-card.service";
-import { FileText, Loader2, CreditCard, Mail } from "lucide-react";
+import { FileText, Loader2, CreditCard } from "lucide-react";
 import { type FormFilterData } from "./ReportsFilterForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,7 +46,6 @@ interface CreditCardReportsFilterFormProps {
   onSubmitFilters: (filters: FormFilterData) => void;
   isLoading: boolean;
   onExportPdf: () => void;
-  onSendEmail: () => void;
 }
 
 export function CreditCardReportsFilterForm({
@@ -56,7 +55,6 @@ export function CreditCardReportsFilterForm({
   onSubmitFilters,
   isLoading,
   onExportPdf,
-  onSendEmail,
 }: CreditCardReportsFilterFormProps) {
   
   const creditCards = accounts.filter(a => a.type === "CREDIT_CARD");
