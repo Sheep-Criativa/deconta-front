@@ -54,7 +54,7 @@ export function ReportsPage() {
   const [hasData, setHasData] = useState(false);
   
   // Current loaded filters
-  const [currentFilters, setCurrentFilters] = useState<FormFilterData | null>(null);
+  // const [currentFilters, setCurrentFilters] = useState<FormFilterData | null>(null);
 
   // Email Modal State
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -124,7 +124,7 @@ export function ReportsPage() {
         setReportDateRange("Período Geral (Todo o histórico)");
       }
 
-      setCurrentFilters(filters);
+      // setCurrentFilters(filters);
       setHasData(true);
       toast.success("Dados do relatório carregados com sucesso!");
 
