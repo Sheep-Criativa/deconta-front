@@ -168,7 +168,7 @@ export function CreditCardReportsFilterForm({
           <CreditCard size={18} className="text-indigo-500 shrink-0" /> Relatório de Fatura
         </h3>
         <div className="grid grid-cols-2 gap-2 w-full">
-          <Button 
+          {/* <Button 
             type="button"
             variant="outline" 
             onClick={onSendEmail}
@@ -177,7 +177,7 @@ export function CreditCardReportsFilterForm({
           >
             <Mail size={16} className="mr-2 shrink-0" />
             E-mail
-          </Button>
+          </Button> */}
           <Button 
             type="button"
             variant="outline" 
