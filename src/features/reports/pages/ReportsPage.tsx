@@ -185,13 +185,13 @@ export function ReportsPage() {
     }
   };
 
-  const handleOpenEmailModal = () => {
-    if (!hasData || !currentFilters) {
-      toast.error("Gere os dados do relatório primeiro para enviar por e-mail.");
-      return;
-    }
-    setIsEmailModalOpen(true);
-  };
+  // const handleOpenEmailModal = () => {
+  //   if (!hasData || !currentFilters) {
+  //     toast.error("Gere os dados do relatório primeiro para enviar por e-mail.");
+  //     return;
+  //   }
+  //   setIsEmailModalOpen(true);
+  // };
 
   const handleSendEmailSubmit = async () => {
     if (!user || !emailToSend) return;
@@ -289,7 +289,7 @@ export function ReportsPage() {
               onSubmitFilters={handleGenerateData}
               isLoading={loadingData}
               onExportPdf={handleExportPdf}
-              onSendEmail={handleOpenEmailModal}
+              // onSendEmail={handleOpenEmailModal}
             />
           ) : (
             <CreditCardReportsFilterForm
@@ -299,7 +299,7 @@ export function ReportsPage() {
               onSubmitFilters={handleGenerateData}
               isLoading={loadingData}
               onExportPdf={handleExportPdf}
-              onSendEmail={handleOpenEmailModal}
+              // onSendEmail={handleOpenEmailModal}
             />
           )}
 
