@@ -72,7 +72,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 
 // ── Balance Card with per-account mini chart ────────────────────────────────
-const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899"];
+const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#8b5cf6", "#3b82f6", "#ec4899"];
 
 function BalanceCard({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
   const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
@@ -178,7 +178,7 @@ function RecentTxRow({
 }
 
 // ─── Mini Card: regular account ─────────────────────────────────────────────
-const ACCT_COLORS = ["#10b981", "#6366f1", "#3b82f6", "#f59e0b", "#ef4444"];
+const ACCT_COLORS = ["#10b981", "#6366f1", "#3b82f6", "#f59e0b", "#8b5cf6"];
 
 function AccountMiniCard({ account, computedBalance }: { account: Account; computedBalance: number }) {
   const color = ACCT_COLORS[account.id % ACCT_COLORS.length];

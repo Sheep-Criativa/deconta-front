@@ -74,7 +74,7 @@ export function ReportsFilterForm({
           <Filter size={18} className="text-emerald-500 shrink-0" /> Filtros do Relatório
         </h3>
         <div className="grid grid-cols-2 gap-2 w-full">
-          <Button 
+          {/* <Button 
             type="button"
             variant="outline" 
             onClick={onSendEmail}
@@ -83,7 +83,7 @@ export function ReportsFilterForm({
           >
             <Mail size={16} className="mr-2 shrink-0" />
             E-mail
-          </Button>
+          </Button> */}
           <Button 
             type="button"
             variant="outline" 

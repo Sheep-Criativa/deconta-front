@@ -53,7 +53,7 @@ export default function NavBar() {
           <Search className="text-gray-400 absolute right-3 top-2" />
         </div> */}
 
-        <Bell className="w-6 h-6 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
+        {/* <Bell className="w-6 h-6 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" /> */}
         <Link to="/report-bug" title="Reportar Problema">
           <CircleAlert className="w-6 h-6 text-gray-400 cursor-pointer hover:text-amber-500 transition-colors" />
         </Link>

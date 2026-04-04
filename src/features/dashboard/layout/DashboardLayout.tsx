@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import NavBar from "../components/Navbar";
+import { ChatWidget } from "../components/ChatWidget";
 
 export default function DashboardLayout() {
   return (
@@ -20,6 +21,9 @@ export default function DashboardLayout() {
         </main>
         
       </div>
+
+      {/* Chat Widget that floats in the corner */}
+      <ChatWidget />
     </div>
   );
 }
