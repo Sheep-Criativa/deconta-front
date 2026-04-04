@@ -1,4 +1,4 @@
-import { Bell, CircleAlert, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
+import { CircleAlert, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import {

@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { type Account } from "@/features/dashboard/services/account.service";
 import { type Category } from "@/features/dashboard/services/category.service";
 import { type Responsible } from "@/features/dashboard/services/responsible.service";
-import { Filter, FileText, Mail } from "lucide-react";
+import { Filter, FileText } from "lucide-react";
 import { reportFilterSchema, type ReportFilterFilters } from "../services/reports.service";
 
 export interface FormFilterData extends ReportFilterFilters {
@@ -40,7 +40,6 @@ interface ReportsFilterFormProps {
   onSubmitFilters: (filters: FormFilterData) => void;
   isLoading: boolean;
   onExportPdf: () => void;
-  onSendEmail: () => void;
 }
 
 export function ReportsFilterForm({
@@ -50,7 +49,6 @@ export function ReportsFilterForm({
   onSubmitFilters,
   isLoading,
   onExportPdf,
-  onSendEmail,
 }: ReportsFilterFormProps) {
   const form = useForm<FormFilterData>({
     resolver: zodResolver(uiFilterSchema) as any,
