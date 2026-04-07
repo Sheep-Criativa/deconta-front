@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { createReport } from "../services/report.service";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 const bugCategories = [
@@ -43,10 +45,10 @@ const severityOptions = [
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 const bugSchema = z.object({
-  title:       z.string().min(5, "Título deve ter ao menos 5 caracteres").max(100),
+  title:       z.string().min(2, "Título deve ter ao menos 2 caracteres").max(100),
   category:    z.string().min(1, "Selecione uma categoria"),
   severity:    z.string().min(1, "Selecione a severidade"),
-  description: z.string().min(20, "Descrição deve ter ao menos 20 caracteres").max(2000),
+  description: z.string().min(2, "Descrição deve ter ao menos 2 caracteres").max(2000),
   steps:       z.string().max(1000).optional(),
   email:       z.string().email("E-mail inválido").optional().or(z.literal("")),
 });
@@ -153,8 +155,16 @@ function SuccessScreen({ onReset }: { onReset: () => void }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ReportBug() {
+  const { user } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const severityMap: Record<string, "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"> = {
+    baixa: "LOW",
+    media: "MEDIUM",
+    alta: "HIGH",
+    critica: "CRITICAL",
+  };
 
   const form = useForm<BugValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,11 +180,23 @@ export default function ReportBug() {
   });
 
   async function onSubmit(values: BugValues) {
+    if (!user) {
+      toast.error("Você precisa estar logado para enviar um relatório.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Simula envio do report (substitua por chamada real à API)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Bug report:", values);
+      await createReport({
+        userId: user.id,
+        title: values.title,
+        category: values.category,
+        severity: severityMap[values.severity] || "LOW",
+        cause: values.description,
+        stepToReproduce: values.steps || undefined,
+        email: values.email || undefined,
+      });
+
       toast.success("Relatório enviado com sucesso!");
       setSubmitted(true);
     } catch {
@@ -187,6 +209,11 @@ export default function ReportBug() {
   function handleReset() {
     form.reset();
     setSubmitted(false);
+  }
+
+  function onInvalid(errors: any) {
+    console.error("Validação falhou:", errors);
+    toast.error("Por favor, preencha todos os campos obrigatórios corretamente.");
   }
 
   return (
@@ -226,7 +253,7 @@ export default function ReportBug() {
         </div>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
 
             {/* ── Informações Básicas ── */}
             <SectionCard title="Informações Básicas" icon={Bug}>
