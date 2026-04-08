@@ -20,6 +20,7 @@ export interface Transaction {
   installmentTotal: number | null;
   parentTransactionId: number | null;
   recurrenceId: number | null;
+  notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -40,9 +41,11 @@ export interface CreateTransactionDTO {
   installmentTotal?: number | null;
   parentTransactionId?: number | null;
   recurrenceId?: number | null;
+  notes?: string | null;
 }
 
 export interface UpdateTransactionDTO {
+  userId: number;
   categoryId?: number;
   responsibleId?: number;
   description?: string;
@@ -51,6 +54,7 @@ export interface UpdateTransactionDTO {
   paymentDate?: Date;
   type?: TransactionType;
   status?: TransactionStatus;
+  notes?: string | null;
 }
 
 export async function getTransactions(userId: number): Promise<Transaction[]> {

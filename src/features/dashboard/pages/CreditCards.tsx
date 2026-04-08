@@ -457,7 +457,8 @@ export default function CreditCards() {
       getResponsibles(user.id),
       getTransactions(user.id),
     ]);
-    const cc = accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
+    const activeAccounts = accounts.filter(a => a.isActive);
+    const cc = activeAccounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
     setCards(cc);
     setCategories(cats);
     setResponsibles(resps);

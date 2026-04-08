@@ -6,10 +6,11 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, CreditCard,
-  ArrowUpRight, ArrowDownRight, Loader2, List, Tag, ArrowUpCircle, ArrowDownCircle,
+  ArrowUpRight, ArrowDownRight, Loader2, List, Tag, ArrowUpCircle, ArrowDownCircle, ChevronRight, ChevronLeft
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO, subMonths, isToday, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getTransactions, type Transaction, type TransactionType } from "../services/transaction.service";
@@ -247,6 +248,82 @@ const renderDonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent 
   );
 };
 
+// ─── Dashboard Calendar Preview  ─────────────────────────────────────────────
+function DashboardCalendar({ transactions, className }: { transactions: Transaction[]; className?: string }) {
+  const navigate = useNavigate();
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+  
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  
+  // Calendário sempre começa na segunda-feira
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  // Realocar o weekDays para bater config de weekStartsOn: 1 se for o caso
+  const adjustedWeekDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+  return (
+    <BaseCard className={`rounded-3xl shadow-none overflow-hidden bg-white border border-zinc-100 p-6 flex flex-col h-full ${className || ''}`}>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-sm font-bold text-zinc-800 tracking-wide">Calendário Financeiro</h3>
+        </div>
+        <div className="flex items-center gap-4">
+           <div className="flex items-center gap-1.5 bg-black/80 border border-white/5 rounded-xl px-1.5 py-1">
+             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
+               <ChevronLeft size={16} />
+             </button>
+             <span className="text-xs font-bold text-white px-2 tracking-wide capitalize min-w-[100px] text-center">
+               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+             </span>
+             <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
+               <ChevronRight size={16} />
+             </button>
+           </div>
+           
+           <button onClick={() => navigate("/history/calendar")} className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest hidden sm:flex items-center gap-1 bg-emerald-500/10 px-3 py-2 rounded-lg">
+             Expandir <ArrowUpRight size={12} />
+           </button>
+        </div>
+      </div>
+      
+      <div className="overflow-x-auto custom-scrollbar -mx-6 px-6 pb-2">
+        <div className="min-w-[600px]">
+          <div className="grid grid-cols-7 mb-3 border-b border-white/5 pb-2">
+            {adjustedWeekDays.map(d => (
+              <div key={d} className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                {d}
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 border-t border-l border-zinc-100 bg-white rounded-xl overflow-hidden flex-1">
+            {days.map(day => {
+              const isCur = isSameMonth(day, monthStart);
+              const dayTxs = transactions.filter(t => isSameDay(parseISO(t.date), day));
+              const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s,t) => s + Number(t.amount), 0);
+              const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s,t) => s + Number(t.amount), 0);
+
+              return (
+                 <div 
+                   key={day.toString()} 
+                   className={`min-h-[75px] p-2 border-b border-r border-black/10 flex flex-col gap-1 transition-colors hover:bg-white/5 cursor-pointer ${!isCur ? 'opacity-30' : ''}`} 
+                   onClick={() => navigate("/history/calendar")}
+                 >
+                   <span className={`text-[10px] font-bold ${isToday(day) ? 'text-emerald-500' : 'text-zinc-500'} mb-1 ml-1`}>{format(day, "d")}</span>
+                   {incomes > 0 && <div className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded truncate border border-emerald-500/20">+ {incomes.toLocaleString("pt-BR", {minimumFractionDigits: 1})}</div>}
+                   {expenses > 0 && <div className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded truncate border border-rose-500/20">- {expenses.toLocaleString("pt-BR", {minimumFractionDigits: 1})}</div>}
+                 </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </BaseCard>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DashboardHome() {
   const { user } = useAuth();
@@ -396,14 +473,12 @@ export default function DashboardHome() {
       </div>
 
       {/* ── Main Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
-        {/* ── LEFT COL (8) ── */}
-        <div className="lg:col-span-8 space-y-6">
-
-          {/* Area/Bar Chart: Income vs Expense */}
-          <BaseCard id="tour-dashboard-flow" className="rounded-3xl border border-zinc-100 shadow-none">
-            <div className="flex justify-between items-center mb-6">
+        {/* --- ROW 1 --- */}
+        {/* Area/Bar Chart: Income vs Expense */}
+        <BaseCard id="tour-dashboard-flow" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-8 flex flex-col h-full">
+          <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-sm font-bold text-zinc-900">Fluxo de Caixa</h3>
                 <p className="text-[11px] text-zinc-400 font-medium">Últimos 6 meses</p>
@@ -422,39 +497,13 @@ export default function DashboardHome() {
             </ResponsiveContainer>
           </BaseCard>
 
-          {/* Recent Transactions */}
-          <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
-                  <List size={14} />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
-              </div>
-              <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
-                Ver todas →
-              </a>
-            </div>
-            {recentTxs.length === 0 ? (
-              <p className="text-sm text-zinc-400 text-center py-8">Nenhuma transação ainda.</p>
-            ) : (
-              recentTxs.map(tx => (
-                <RecentTxRow key={tx.id} tx={tx} accounts={accounts} categories={categories} />
-              ))
-            )}
-          </BaseCard>
-        </div>
-
-        {/* ── RIGHT COL (4) ── */}
-        <div className="lg:col-span-4 space-y-6">
-
           {/* Donut: Gastos por Categoria */}
-          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
+          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
             <h3 className="text-sm font-bold text-zinc-900 mb-4">Gastos por Categoria</h3>
             {categoryData.length === 0 ? (
               <p className="text-xs text-zinc-400 text-center py-8">Sem dados este mês.</p>
             ) : (
-              <>
+              <div className="flex-1 flex flex-col">
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie
@@ -476,7 +525,7 @@ export default function DashboardHome() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2 mt-auto">
                   {categoryData.map((c, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -489,20 +538,49 @@ export default function DashboardHome() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </BaseCard>
 
+          {/* --- ROW 2 --- */}
+          {/* Dashboard Calendar Preview */}
+          <DashboardCalendar transactions={transactions} className="lg:col-span-8" />
+
+          {/* Recent Transactions */}
+          <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
+                  <List size={14} />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
+              </div>
+              <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
+                Ver todas →
+              </a>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+              {recentTxs.length === 0 ? (
+                <p className="text-sm text-zinc-400 text-center py-8">Nenhuma transação ainda.</p>
+              ) : (
+                recentTxs.map(tx => (
+                  <RecentTxRow key={tx.id} tx={tx} accounts={accounts} categories={categories} />
+                ))
+              )}
+            </div>
+          </BaseCard>
+
+          {/* --- ROW 3 --- */}
           {/* Credit Card Statements */}
           {openStatements.length > 0 && (
-            <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
+            <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
                   <CreditCard size={14} />
                 </div>
                 <h3 className="text-sm font-bold text-zinc-900">Faturas Abertas</h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 flex-1">
                 {openStatements.slice(0, 3).map(s => {
                   const acc = accounts.find(a => a.id === s.accountId);
                   const isOpen = s.status.trim() === "OPEN";
@@ -530,7 +608,7 @@ export default function DashboardHome() {
           )}
 
           {/* ─── Suas Contas ─── */}
-          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none">
+          <BaseCard className={`rounded-3xl border border-zinc-100 shadow-none flex flex-col h-full ${openStatements.length > 0 ? "lg:col-span-8" : "lg:col-span-12"}`}>
             {/* Header + tabs */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-zinc-900">Suas Contas</h3>
@@ -555,7 +633,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Cards strip */}
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none flex-1">
               {accountTab === "contas" ? (
                 nonCcAccounts.length > 0 ? nonCcAccounts.map(acc => (
                   <AccountMiniCard
@@ -586,7 +664,7 @@ export default function DashboardHome() {
               )}
             </div>
           </BaseCard>
-        </div>
+
       </div>
 
       <CreateTransactionDialog

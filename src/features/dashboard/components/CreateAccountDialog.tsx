@@ -114,12 +114,13 @@ export function CreateAccountDialog({
       if (isEditing && editingAccount) {
         // ── EDIT MODE: only send fields that can be safely edited ──
         const payload: any = {
-          userId:       user.id,
-          name:         values.name,
-          type:         values.type,
-          currencyCode: values.currencyCode,
-          isActive:     editingAccount.isActive,
-          // initialBalance intentionally NOT sent on edit
+          userId:         user.id,
+          name:           values.name,
+          type:           values.type,
+          currencyCode:   values.currencyCode,
+          isActive:       editingAccount.isActive,
+          initialBalance: Number(editingAccount.initialBalance),
+          currentBalance: Number(editingAccount.currentBalance), // backend requirement
         };
 
         if (values.type === AccountType.CREDIT_CARD) {

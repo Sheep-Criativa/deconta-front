@@ -25,7 +25,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
@@ -52,6 +58,7 @@ const formSchema = z.object({
   status: z.enum(["PENDING", "CONFIRMED", "RECONCILED"]),
   // Credit card only
   installmentTotal: z.coerce.number().min(1).max(36).optional(),
+  notes: z.string().max(1000).optional(),
 });
 
 interface CreateTransactionDialogProps {
@@ -64,6 +71,8 @@ interface CreateTransactionDialogProps {
   defaultAccountId?: number;
   /** Show only credit-card accounts in the selector */
   onlyCreditCards?: boolean;
+  /** Optionally pre-fill the form with a selected date */
+  defaultDate?: Date;
 }
 
 export function CreateTransactionDialog({
@@ -74,6 +83,7 @@ export function CreateTransactionDialog({
   transaction,
   defaultAccountId,
   onlyCreditCards = false,
+  defaultDate,
 }: CreateTransactionDialogProps) {
   const isEditMode = !!transaction;
   const { user } = useAuth();
@@ -95,6 +105,7 @@ export function CreateTransactionDialog({
       amount: 0,
       installmentTotal: 1,
       description: "",
+      notes: "",
     },
   });
 
@@ -171,23 +182,25 @@ export function CreateTransactionDialog({
           amount: Number(transaction.amount),
           installmentTotal: transaction.installmentTotal ?? 1,
           description: transaction.description ?? "",
+          notes: transaction.notes ?? "",
         });
       } else {
         form.reset({
           type: defaultType,
           status: "CONFIRMED",
-          date: format(new Date(), "yyyy-MM-dd"),
-          paymentDate: format(new Date(), "yyyy-MM-dd"),
+          date: defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          paymentDate: defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
           amount: 0,
           installmentTotal: 1,
           description: "",
+          notes: "",
           // Pre-select the account if provided
           ...(defaultAccountId ? { accountId: defaultAccountId } : {}),
         });
         setSelectedAccount(null);
       }
     }
-  }, [open, defaultType, transaction, defaultAccountId]);
+  }, [open, defaultType, transaction, defaultAccountId, defaultDate]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
@@ -276,8 +289,11 @@ export function CreateTransactionDialog({
       const baseDate = new Date(submitDate + "T12:00:00");
       const basePaymentDate = new Date(submitPaymentDate + "T12:00:00");
 
+      console.log("Mock enviando Comentários para o backend: ", values.notes);
+
       if (isEditMode && transaction) {
         await updateTransaction(transaction.id, {
+          userId: user.id,
           categoryId: resolvedCategoryId,
           responsibleId: resolvedRespId,
           description: values.description || undefined,
@@ -286,6 +302,7 @@ export function CreateTransactionDialog({
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
           status: isCreditCard ? "CONFIRMED" : values.status as TransactionStatus,
+          notes: values.notes || undefined,
         });
         toast.success("Transação atualizada!");
       } else {
@@ -300,6 +317,7 @@ export function CreateTransactionDialog({
           paymentDate: basePaymentDate,
           type: values.type as TransactionType,
           status: isCreditCard ? "CONFIRMED" : values.status as TransactionStatus,
+          notes: values.notes || undefined,
           ...(isCreditCard && {
             installmentTotal: values.installmentTotal ?? 1,
           }),
@@ -314,8 +332,11 @@ export function CreateTransactionDialog({
       form.reset();
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save transaction", error);
+      if (error.response?.data) {
+        console.error("=== ZOD ERROR DO BACKEND ===", JSON.stringify(error.response.data, null, 2));
+      }
       toast.error("Erro ao salvar transação. Tente novamente.");
     } finally {
       setLoading(false);
@@ -648,7 +669,23 @@ export function CreateTransactionDialog({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Status</FormLabel>
+                    <div className="flex items-center gap-1">
+                      <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Status</FormLabel>
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger type="button" tabIndex={-1} className="cursor-help">
+                            <Info size={14} className="text-zinc-400 hover:text-emerald-500 transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-zinc-900 border-zinc-800 text-white max-w-[280px] p-3 shadow-xl rounded-xl">
+                            <div className="space-y-2 text-xs font-medium">
+                              <p><span className="text-emerald-400 font-bold">Confirmado:</span> Quando uma receita já caiu na conta ou despesa já foi descontada.</p>
+                              <p><span className="text-amber-400 font-bold">Pendente:</span> Receitas a receber e despesas a pagar (ainda não descontadas).</p>
+                              <p><span className="text-blue-400 font-bold">Conciliado:</span> Transação verificada com o extrato bancário oficial.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium">
@@ -693,6 +730,25 @@ export function CreateTransactionDialog({
                     <Input
                       placeholder="Ex: Supermercado, Netflix, Aluguel..."
                       className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium focus-visible:ring-emerald-500"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Notes / Comentários */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Comentários / Observações</FormLabel>
+                  <FormControl>
+                    <textarea
+                      placeholder="Alguma nota adicional..."
+                      className="w-full h-20 p-3 rounded-xl bg-zinc-50 border border-zinc-200 font-medium focus-visible:ring-emerald-500 focus-visible:outline-none focus:ring-2 resize-none"
                       {...field}
                     />
                   </FormControl>

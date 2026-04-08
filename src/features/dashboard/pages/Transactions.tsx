@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTransactions, deleteTransaction, type Transaction } from "../services/transaction.service";
@@ -163,6 +164,29 @@ function TransactionRow({
           >
             <Pencil size={13} className="text-zinc-400" /> Editar
           </DropdownMenuItem>
+          {(isExpense && tx.status.trim() === "PENDING" && new Date(tx.date) > new Date()) && (
+            <DropdownMenuItem
+              onClick={async () => {
+                const newDesc = tx.description ? `${tx.description} - (Antecipado)` : "Pagamento (Antecipado)";
+                console.log(`Antecipando: Status CONFIRMED, Data pagamento Hoje, Comment: ${newDesc}`);
+                try {
+                  const { updateTransaction } = await import("../services/transaction.service");
+                  await updateTransaction(tx.id, {
+                    status: "CONFIRMED",
+                    paymentDate: new Date(),
+                    description: newDesc,
+                  });
+                  toast.success("Pagamento antecipado marcado!");
+                  window.location.reload(); // naive reload para não prop dril loadAll aqui, embora seja bom passar onSuccess
+                } catch {
+                  toast.error("Erro ao antecipar.");
+                }
+              }}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+            >
+              <CheckCircle2 size={13} className="text-emerald-500" /> Antecipar Hoje
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => onDelete(tx)}
             className="flex items-center gap-3 w-full px-4 py-2.5 text-[12px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"

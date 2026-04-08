@@ -27,7 +27,7 @@ export default function Accounts() {
         getAccounts(user.id),
         getTransactions(user.id),
       ]);
-      setAccounts(accs);
+      setAccounts(accs.filter(a => a.isActive));
       setTransactions(txs);
     } catch (error) {
       console.error("Failed to fetch accounts/transactions", error);
@@ -40,7 +40,6 @@ export default function Accounts() {
     fetchData();
   }, [user]);
 
-  // Only non-credit-card accounts belong on this page
   const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
 
   // Compute real balances from transactions (for all accounts so lookup works)
