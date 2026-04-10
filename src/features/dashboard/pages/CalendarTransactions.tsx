@@ -79,6 +79,7 @@ export default function CalendarTransactions() {
       console.log(`Antecipando: Status CONFIRMED, Data pagamento Hoje, Comment: ${newDesc}`);
       
       await updateTransaction(tx.id, {
+        userId: tx.userId,
         status: "CONFIRMED",
         paymentDate: today,
         description: newDesc,

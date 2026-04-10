@@ -9,9 +9,8 @@ import { type Transaction } from "../services/transaction.service";
 import { type Account } from "../services/account.service";
 import { type Category } from "../services/category.service";
 import { type Responsible } from "../services/responsible.service";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Landmark, Pencil, Tag, User, AlignLeft, Calendar, Info } from "lucide-react";
+import { Landmark, Pencil, Tag, User, AlignLeft, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface ViewTransactionDialogProps {
   open: boolean;
