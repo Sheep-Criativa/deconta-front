@@ -10,17 +10,21 @@ import {
   Trash2,
   MoreVertical,
   CheckCircle2,
+  CreditCard,
+  Landmark,
+  Clock3,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTransactions, deleteTransaction, type Transaction } from "../services/transaction.service";
-import { getAccounts, type Account } from "../services/account.service";
+import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { CreateRecurrenceDialog } from "../components/CreateRecurrenceDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
-import { format, parseISO, isToday, isYesterday, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
+import { format, parseISO, isToday, isYesterday, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, ChevronDown, Repeat } from "lucide-react";
@@ -32,22 +36,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+type ViewTab = "geral" | "contas" | "cartoes";
+
 const typeConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  INCOME:     { label: "Receita",       color: "text-emerald-600", bg: "bg-emerald-50",  icon: ArrowUpCircle   },
-  EXPENSE:    { label: "Despesa",       color: "text-rose-600",    bg: "bg-rose-50",      icon: ArrowDownCircle },
-  TRANSFER:   { label: "Transferência", color: "text-blue-600",    bg: "bg-blue-50",      icon: ArrowUpCircle   },
+  INCOME:   { label: "Receita",       color: "text-emerald-600", bg: "bg-emerald-50", icon: ArrowUpCircle   },
+  EXPENSE:  { label: "Despesa",       color: "text-rose-600",    bg: "bg-rose-50",    icon: ArrowDownCircle },
+  TRANSFER: { label: "Transferência", color: "text-blue-600",    bg: "bg-blue-50",    icon: ArrowUpCircle   },
 };
 
-const statusBadge: Record<string, string> = {
-  CONFIRMED:  "bg-emerald-50 text-emerald-700",
-  PENDING:    "bg-amber-50 text-amber-700",
-  RECONCILED: "bg-blue-50 text-blue-700",
-};
-
-const statusLabel: Record<string, string> = {
-  CONFIRMED:  "Confirmado",
-  PENDING:    "Pendente",
-  RECONCILED: "Conciliado",
+const statusConfig: Record<string, { label: string; badge: string; icon: any }> = {
+  CONFIRMED:  { label: "Confirmado", badge: "bg-emerald-50 text-emerald-700 border border-emerald-100", icon: CheckCircle2 },
+  PENDING:    { label: "Pendente",   badge: "bg-amber-50 text-amber-700 border border-amber-100",       icon: Clock3       },
+  RECONCILED: { label: "Conciliado", badge: "bg-blue-50 text-blue-700 border border-blue-100",          icon: ShieldCheck  },
 };
 
 function groupTransactionsByDate(txs: Transaction[]) {
@@ -83,31 +83,35 @@ function TransactionRow({
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
 }) {
-  const cfg = typeConfig[tx.type.trim()] ?? typeConfig.EXPENSE;
-  const Icon = cfg.icon;
+  const cfg      = typeConfig[tx.type.trim()] ?? typeConfig.EXPENSE;
+  const stCfg    = statusConfig[tx.status.trim()] ?? statusConfig.CONFIRMED;
+  const Icon     = cfg.icon;
+  const StatusIcon = stCfg.icon;
   const account  = accounts.find(a => a.id === tx.accountId);
   const category = categories.find(c => c.id === tx.categoryId);
   const resp     = responsibles.find(r => r.id === tx.responsibleId);
-  const isExpense = tx.type.trim() === "EXPENSE";
+  const isExpense  = tx.type.trim() === "EXPENSE";
+  const isCreditCard = account?.type.trim() === AccountType.CREDIT_CARD;
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-zinc-50 rounded-2xl transition-colors group cursor-default relative">
-      {/* Icon — resolve Lucide key, legacy emoji, or type icon */}
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.bg} ${cfg.color}`}
+    <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50/80 rounded-2xl transition-colors group cursor-default relative">
+
+      {/* Category icon */}
+      <div
+        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.bg} ${cfg.color}`}
         style={category?.color ? { backgroundColor: category.color, color: "#fff" } : {}}
       >
         {(() => {
           if (category?.icon) {
             const LucideIcon = ICON_MAP[category.icon];
             if (LucideIcon) return <LucideIcon size={18} strokeWidth={1.75} />;
-            // legacy emoji fallback
             return <span className="text-lg leading-none">{category.icon}</span>;
           }
           return <Icon size={18} />;
         })()}
       </div>
 
-      {/* Info */}
+      {/* Description + account + resp */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-zinc-900 truncate">
           {tx.description || category?.name || cfg.label}
@@ -119,7 +123,12 @@ function TransactionRow({
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {account && (
-            <span className="text-[10px] text-zinc-400 font-medium">{account.name}</span>
+            <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
+              {isCreditCard
+                ? <CreditCard size={10} className="text-zinc-300" />
+                : <Landmark size={10} className="text-zinc-300" />}
+              {account.name}
+            </span>
           )}
           {resp && (
             <>
@@ -136,24 +145,29 @@ function TransactionRow({
         </div>
       </div>
 
-      {/* Status */}
-      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full hidden sm:inline-flex ${statusBadge[tx.status.trim()] ?? "bg-zinc-100 text-zinc-500"}`}>
-        {statusLabel[tx.status.trim()] ?? tx.status.trim()}
+      {/* Tipo badge */}
+      <span className={`hidden md:inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.color} flex-shrink-0`}>
+        <Icon size={10} />
+        {cfg.label}
+      </span>
+
+      {/* Status badge */}
+      <span className={`hidden sm:inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex-shrink-0 ${stCfg.badge}`}>
+        <StatusIcon size={10} />
+        {stCfg.label}
       </span>
 
       {/* Amount */}
-      <div className="text-right flex-shrink-0">
-        <p className={`font-black text-base ${isExpense ? "text-zinc-900" : "text-emerald-600"}`}>
-          {isExpense ? "-" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+      <div className="text-right flex-shrink-0 min-w-[90px]">
+        <p className={`font-black text-base tabular-nums ${isExpense ? "text-zinc-900" : "text-emerald-600"}`}>
+          {isExpense ? "−" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </p>
       </div>
 
       {/* Actions menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
-          >
+          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
             <MoreVertical size={15} />
           </button>
         </DropdownMenuTrigger>
@@ -168,16 +182,16 @@ function TransactionRow({
             <DropdownMenuItem
               onClick={async () => {
                 const newDesc = tx.description ? `${tx.description} - (Antecipado)` : "Pagamento (Antecipado)";
-                console.log(`Antecipando: Status CONFIRMED, Data pagamento Hoje, Comment: ${newDesc}`);
                 try {
                   const { updateTransaction } = await import("../services/transaction.service");
                   await updateTransaction(tx.id, {
+                    userId: 0, // will be overridden by the backend with the auth user
                     status: "CONFIRMED",
                     paymentDate: new Date(),
                     description: newDesc,
                   });
                   toast.success("Pagamento antecipado marcado!");
-                  window.location.reload(); // naive reload para não prop dril loadAll aqui, embora seja bom passar onSuccess
+                  window.location.reload();
                 } catch {
                   toast.error("Erro ao antecipar.");
                 }
@@ -224,7 +238,7 @@ function DayGroup({
 
   return (
     <div>
-      <div className="flex justify-between items-center px-4 mb-2">
+      <div className="flex justify-between items-center px-1 mb-2">
         <h3 className="text-[11px] font-black uppercase tracking-widest text-zinc-400 capitalize">
           {formatDayLabel(dateStr)}
         </h3>
@@ -232,7 +246,7 @@ function DayGroup({
           {dayTotal >= 0 ? "+" : ""}R$ {Math.abs(dayTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </span>
       </div>
-      <div className="bg-white rounded-3xl border border-zinc-100 overflow-hidden divide-y divide-zinc-50">
+      <div className="bg-white rounded-3xl border border-zinc-100 overflow-hidden divide-y divide-zinc-50/80">
         {transactions.map(tx => (
           <TransactionRow
             key={tx.id}
@@ -327,25 +341,32 @@ function MonthlySummary({ transactions }: { transactions: Transaction[] }) {
   const income  = transactions.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
   const expense = transactions.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
   const balance = income - expense;
+  const pending = transactions.filter(t => t.status.trim() === "PENDING").length;
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div className="bg-white rounded-2xl p-5 border border-zinc-100">
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receitas</p>
-        <p className="text-xl font-black text-emerald-600 mt-1">
+        <p className="text-xl font-black text-emerald-600 mt-1 tabular-nums">
           R$ {income.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </p>
       </div>
       <div className="bg-white rounded-2xl p-5 border border-zinc-100">
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Despesas</p>
-        <p className="text-xl font-black text-rose-500 mt-1">
+        <p className="text-xl font-black text-rose-500 mt-1 tabular-nums">
           R$ {expense.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </p>
       </div>
       <div className={`rounded-2xl p-5 border ${balance >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}`}>
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Saldo</p>
-        <p className={`text-xl font-black mt-1 ${balance >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+        <p className={`text-xl font-black mt-1 tabular-nums ${balance >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
           {balance >= 0 ? "+" : ""}R$ {balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+        </p>
+      </div>
+      <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100">
+        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Pendentes</p>
+        <p className="text-xl font-black text-amber-700 mt-1">
+          {pending} lançamento{pending !== 1 ? "s" : ""}
         </p>
       </div>
     </div>
@@ -367,6 +388,7 @@ export default function Transactions() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [filters, setFilters] = useState<Filters>({ type: "", accountId: "", status: "" });
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+  const [viewTab, setViewTab] = useState<ViewTab>("geral");
 
   const loadAll = async () => {
     if (!user) return;
@@ -377,7 +399,7 @@ export default function Transactions() {
       getResponsibles(user.id),
     ]);
     setTransactions(txs);
-    setAccounts(accs);
+    setAccounts(accs.filter(a => a.isActive));
     setCategories(cats);
     setResponsibles(resps);
   };
@@ -386,18 +408,34 @@ export default function Transactions() {
     loadAll().finally(() => setLoading(false));
   }, [user]);
 
-  const monthEnd   = endOfMonth(currentMonth);
+  // Separate account lists for the view tabs
+  const creditCardAccountIds = useMemo(
+    () => new Set(accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD).map(a => a.id)),
+    [accounts]
+  );
+  const bankAccountIds = useMemo(
+    () => new Set(accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD).map(a => a.id)),
+    [accounts]
+  );
+
+  const monthEnd = endOfMonth(currentMonth);
 
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
       const d = parseISO(tx.date);
       if (d < currentMonth || d > monthEnd) return false;
-      if (filters.type      && tx.type.trim()   !== filters.type)      return false;
-      if (filters.accountId && tx.accountId      !== Number(filters.accountId)) return false;
-      if (filters.status    && tx.status.trim()  !== filters.status)    return false;
+
+      // View tab filtering
+      if (viewTab === "contas"   && !bankAccountIds.has(tx.accountId))      return false;
+      if (viewTab === "cartoes"  && !creditCardAccountIds.has(tx.accountId)) return false;
+
+      // Additional filters
+      if (filters.type      && tx.type.trim()  !== filters.type)                   return false;
+      if (filters.accountId && tx.accountId    !== Number(filters.accountId))       return false;
+      if (filters.status    && tx.status.trim() !== filters.status)                 return false;
       return true;
     });
-  }, [transactions, filters, currentMonth]);
+  }, [transactions, filters, currentMonth, viewTab, creditCardAccountIds, bankAccountIds]);
 
   const grouped = useMemo(() => groupTransactionsByDate(filtered), [filtered]);
 
@@ -410,7 +448,6 @@ export default function Transactions() {
       toast.success("Transação excluída!");
       setDeletingTx(null);
     } catch {
-      // Backend not ready yet — remove optimistically for UX preview
       setTransactions(prev => prev.filter(t => t.id !== deletingTx.id));
       toast.success("Transação excluída!");
       setDeletingTx(null);
@@ -427,17 +464,45 @@ export default function Transactions() {
     );
   }
 
+  const tabs: { key: ViewTab; label: string; icon: any; count: number }[] = [
+    {
+      key: "geral",
+      label: "Geral",
+      icon: List,
+      count: transactions.filter(tx => {
+        const d = parseISO(tx.date);
+        return d >= currentMonth && d <= monthEnd;
+      }).length,
+    },
+    {
+      key: "contas",
+      label: "Contas",
+      icon: Landmark,
+      count: transactions.filter(tx => {
+        const d = parseISO(tx.date);
+        return d >= currentMonth && d <= monthEnd && bankAccountIds.has(tx.accountId);
+      }).length,
+    },
+    {
+      key: "cartoes",
+      label: "Cartões",
+      icon: CreditCard,
+      count: transactions.filter(tx => {
+        const d = parseISO(tx.date);
+        return d >= currentMonth && d <= monthEnd && creditCardAccountIds.has(tx.accountId);
+      }).length,
+    },
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">
-            Transações
-          </h1>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Transações</h1>
           <p className="text-zinc-400 text-sm font-medium mt-0.5">
-            {filtered.length} lançamento{filtered.length !== 1 ? "s" : ""}
+            {filtered.length} lançamento{filtered.length !== 1 ? "s" : ""} em {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
           </p>
         </div>
 
@@ -450,13 +515,31 @@ export default function Transactions() {
             >
               <ChevronLeft size={14} />
             </button>
-            <span className="text-[12px] font-black text-zinc-700 px-2 capitalize min-w-[130px] text-center">
-              {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
-            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-[12px] font-black text-zinc-700 px-2 capitalize min-w-[130px] text-center hover:bg-zinc-100 py-1.5 rounded-lg transition-colors cursor-pointer outline-none">
+                  {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="bg-white rounded-2xl shadow-xl py-2 w-48 max-h-[300px] overflow-y-auto border border-zinc-100">
+                {Array.from({ length: 48 }).map((_, i) => {
+                  const date = addMonths(startOfMonth(new Date()), i - 12); 
+                  const isCur = isSameMonth(date, currentMonth);
+                  return (
+                    <DropdownMenuItem 
+                      key={date.toISOString()} 
+                      onClick={() => setCurrentMonth(date)} 
+                      className={`text-[13px] font-bold capitalize cursor-pointer rounded-lg px-3 py-2 ${isCur ? "bg-emerald-50 text-emerald-600" : "text-zinc-700 hover:bg-zinc-50"}`}
+                    >
+                      {format(date, "MMMM yyyy", { locale: ptBR })}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-              disabled={currentMonth >= startOfMonth(new Date())}
-              className="w-7 h-7 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-7 h-7 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
             >
               <ChevronRight size={14} />
             </button>
@@ -477,7 +560,7 @@ export default function Transactions() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white rounded-2xl shadow-xl border border-zinc-100 py-2 w-48">
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => setIsRecurrenceOpen(true)}
                   className="px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50 cursor-pointer flex items-center gap-2"
                 >
@@ -492,8 +575,43 @@ export default function Transactions() {
       {/* KPIs */}
       <MonthlySummary transactions={filtered} />
 
-      {/* Filters */}
-      <FilterBar filters={filters} onChange={setFilters} accounts={accounts} />
+      {/* View Tabs */}
+      <div className="flex items-center gap-2">
+        <div className="flex bg-white border border-zinc-100 rounded-2xl p-1.5 gap-1">
+          {tabs.map(tab => {
+            const TabIcon = tab.icon;
+            const active = viewTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setViewTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black transition-all ${
+                  active
+                    ? "bg-zinc-900 text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50"
+                }`}
+              >
+                <TabIcon size={12} />
+                {tab.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                  active ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-400"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Additional filters */}
+        <FilterBar filters={filters} onChange={setFilters} accounts={
+          viewTab === "contas"
+            ? accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD)
+            : viewTab === "cartoes"
+              ? accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD)
+              : accounts
+        } />
+      </div>
 
       {/* Delete confirmation banner */}
       {deletingTx && (
@@ -525,12 +643,20 @@ export default function Transactions() {
       {/* Transaction list */}
       {grouped.length === 0 ? (
         <div className="bg-white border-2 border-dashed border-zinc-100 rounded-3xl p-14 text-center">
-          <List size={44} className="mx-auto text-zinc-200 mb-4" />
+          {viewTab === "cartoes"
+            ? <CreditCard size={44} className="mx-auto text-zinc-200 mb-4" />
+            : viewTab === "contas"
+              ? <Landmark size={44} className="mx-auto text-zinc-200 mb-4" />
+              : <List size={44} className="mx-auto text-zinc-200 mb-4" />}
           <h3 className="text-lg font-bold text-zinc-900">Nenhuma transação encontrada</h3>
           <p className="text-zinc-400 text-sm mt-1">
             {Object.values(filters).some(Boolean)
               ? "Tente ajustar os filtros."
-              : "Clique em \"Nova Transação\" para começar."}
+              : viewTab === "cartoes"
+                ? "Nenhum lançamento de cartão de crédito neste mês."
+                : viewTab === "contas"
+                  ? "Nenhum lançamento em contas bancárias neste mês."
+                  : "Clique em \"Nova Transação\" para começar."}
           </p>
         </div>
       ) : (
@@ -569,7 +695,7 @@ export default function Transactions() {
       <CreateRecurrenceDialog
         open={isRecurrenceOpen}
         onOpenChange={setIsRecurrenceOpen}
-        onSuccess={loadAll} // or reload recurrences when we implement a view for them
+        onSuccess={loadAll}
       />
     </div>
   );

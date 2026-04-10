@@ -30,48 +30,79 @@ const fmt = (n: number) =>
   `R$ ${Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 // ─── Card Visual ───────────────────────────────────────────────────────────────
-function CardVisual({ name, limit, used }: { name: string; limit: number; used: number }) {
-  return (
-    <div className="relative w-full aspect-[1.7/1] rounded-3xl bg-zinc-900 p-7 text-white overflow-hidden shadow-2xl">
-      <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full" />
-      <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-white/5 rounded-full" />
+function CardVisual({ name, limit, used, color }: { name: string; limit: number; used: number; color?: string }) {
+  const usedPct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+  const available = Math.max(limit - used, 0);
 
-      <div className="flex justify-between items-start z-10 relative">
-        <div className="w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-md flex items-center justify-center overflow-hidden">
-          <div className="grid grid-cols-2 w-full h-full opacity-40 gap-px p-0.5">
-            <div className="bg-yellow-900/40 rounded-sm" /><div className="bg-yellow-900/40 rounded-sm" />
-            <div className="bg-yellow-900/40 rounded-sm" /><div className="bg-yellow-900/40 rounded-sm" />
-          </div>
-        </div>
-        <div className="text-white/60">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-            <path d="M8 12C8 9.79 9.79 8 12 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M5 12C5 8.13 8.13 5 12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  // Derive a gradient from color or fallback to premium dark
+  const gradientStyle = color
+    ? { background: `linear-gradient(135deg, ${color}ee 0%, ${color}99 60%, #18181b 100%)` }
+    : { background: "linear-gradient(135deg, #18181b 0%, #27272a 55%, #3f3f46 100%)" };
+
+  return (
+    <div
+      className="relative w-full aspect-[1.75/1] rounded-3xl p-6 text-white overflow-hidden shadow-2xl select-none"
+      style={gradientStyle}
+    >
+      {/* Decorative blobs */}
+      <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/5 rounded-full pointer-events-none" />
+      <div className="absolute -bottom-14 -left-14 w-56 h-56 bg-white/5 rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-white/[0.02] rounded-full pointer-events-none" />
+
+      {/* Top row — chip + brand circles */}
+      <div className="flex justify-between items-center relative z-10">
+        {/* EMV Chip */}
+        <div className="w-11 h-8 bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center shadow-inner overflow-hidden">
+          <svg viewBox="0 0 44 32" width="36" height="26" className="opacity-60">
+            <rect x="0" y="10" width="44" height="12" fill="rgba(0,0,0,0.3)" rx="1" />
+            <rect x="18" y="0" width="8" height="32" fill="rgba(0,0,0,0.3)" rx="1" />
+            <rect x="4" y="4" width="36" height="24" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="1" rx="3" />
           </svg>
         </div>
+
+        {/* Brand — two overlapping circles (generic) */}
+        <div className="flex items-center -space-x-3">
+          <div className="w-9 h-9 rounded-full bg-rose-500/80 backdrop-blur-sm shadow-lg" />
+          <div className="w-9 h-9 rounded-full bg-amber-400/80 backdrop-blur-sm shadow-lg" />
+        </div>
       </div>
 
-      <div className="mt-5 z-10 relative">
-        <p className="text-white/50 text-[11px] tracking-[0.25em] font-medium">•••• •••• •••• 7852</p>
+      {/* Card name */}
+      <div className="mt-5 relative z-10">
+        <p className="text-white font-bold text-base tracking-wide leading-tight line-clamp-1">
+          {name}
+        </p>
       </div>
 
-      <div className="mt-4 flex justify-between items-end z-10 relative">
+      {/* Bottom row — available + limit */}
+      <div className="mt-3 flex justify-between items-end relative z-10">
         <div>
-          <p className="text-white/40 text-[9px] uppercase font-bold tracking-widest">Titular</p>
-          <p className="text-white font-bold text-sm tracking-wide mt-0.5">{name}</p>
+          <p className="text-white/40 text-[9px] uppercase font-bold tracking-widest">Disponível</p>
+          <p className="text-white font-black text-lg mt-0.5 tabular-nums">
+            R$ {available.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+          </p>
         </div>
         <div className="text-right">
-          <p className="text-white/40 text-[9px] uppercase font-bold tracking-widest">Limite</p>
-          <p className="text-emerald-400 font-black text-sm mt-0.5">
-            R$ {(limit - used).toLocaleString("pt-BR")}
+          <p className="text-white/40 text-[9px] uppercase font-bold tracking-widest">Limite total</p>
+          <p className="text-white/70 font-bold text-sm mt-0.5 tabular-nums">
+            R$ {limit.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
           </p>
         </div>
       </div>
 
-      <div className="absolute bottom-5 right-6 flex z-10">
-        <div className="w-7 h-7 bg-red-500 rounded-full opacity-90" />
-        <div className="w-7 h-7 bg-orange-400 rounded-full -ml-3 opacity-90" />
+      {/* Usage bar */}
+      <div className="mt-4 relative z-10">
+        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${
+              usedPct > 85 ? "bg-rose-400" : usedPct > 60 ? "bg-amber-400" : "bg-emerald-400"
+            }`}
+            style={{ width: `${usedPct}%` }}
+          />
+        </div>
+        <p className="text-white/30 text-[9px] font-bold mt-1 text-right">
+          {usedPct.toFixed(0)}% utilizado
+        </p>
       </div>
     </div>
   );
@@ -578,7 +609,11 @@ export default function CreditCards() {
           {/* LEFT: Card visual + txs */}
           <div className="lg:col-span-4 space-y-6">
             {selectedCard && (
-              <CardVisual name={selectedCard.name} limit={totalLimit} used={usedAmount} />
+              <CardVisual
+                name={selectedCard.name}
+                limit={totalLimit}
+                used={usedAmount}
+              />
             )}
 
             <div className="bg-white rounded-3xl p-6 border border-zinc-100">

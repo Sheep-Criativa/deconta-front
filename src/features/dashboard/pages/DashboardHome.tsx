@@ -18,7 +18,7 @@ import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
-import { buildBalanceMap, computeTotalBalance } from "../utils/balanceUtils";
+import { buildBalanceMap, computeTotalBalance, computeTotalSimulatedBalance } from "../utils/balanceUtils";
 import { OnboardingTour } from "../components/OnboardingTour";
 
 // ─── Chart: Income vs Expense bar chart (last 6 months) ──────────────────────
@@ -78,8 +78,10 @@ const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#8b5cf6", "#3b82f6", "
 function BalanceCard({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
   const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
   const balanceMap    = buildBalanceMap(accounts, transactions);
-  const total         = computeTotalBalance(accounts, transactions);
+  const realTotal     = computeTotalBalance(accounts, transactions);
+  const simTotal      = computeTotalSimulatedBalance(accounts, transactions);
   const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const diff = simTotal - realTotal;
 
   const chartData = nonCcAccounts.map((a, i) => ({
     name:    a.name,
@@ -91,27 +93,43 @@ function BalanceCard({ accounts, transactions }: { accounts: Account[]; transact
     <BaseCard id="tour-dashboard-balance" className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none">
       {/* Header row */}
       <div className="flex justify-between items-start">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Total</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Real</p>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
           <Wallet size={17} />
         </div>
       </div>
 
-      {/* Big value */}
+      {/* Real balance */}
       <div>
-        <h2 className={`text-2xl font-bold tracking-tight ${total >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
-          {fmt(total)}
+        <h2 className={`text-2xl font-bold tracking-tight ${realTotal >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
+          {fmt(realTotal)}
         </h2>
         <p className="text-xs text-zinc-400 font-medium mt-0.5">
-          {nonCcAccounts.length} conta{nonCcAccounts.length !== 1 ? "s" : ""} ativa{nonCcAccounts.length !== 1 ? "s" : ""}
+          {nonCcAccounts.length} conta{nonCcAccounts.length !== 1 ? "s" : ""} · apenas confirmadas
         </p>
+      </div>
+
+      {/* Simulated balance */}
+      <div className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${diff < 0 ? "bg-rose-50" : "bg-zinc-50"}`}>
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Simulado c/ pendentes</p>
+          <p className={`text-sm font-black mt-0.5 ${simTotal >= 0 ? "text-zinc-700" : "text-rose-600"}`}>
+            {fmt(simTotal)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Impacto</p>
+          <p className={`text-sm font-black mt-0.5 ${diff >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            {diff >= 0 ? "+" : ""}{fmt(diff)}
+          </p>
+        </div>
       </div>
 
       {/* Mini per-account bar chart */}
       {chartData.length > 0 && (
         <div className="space-y-1.5 pt-1">
           {chartData.map(d => {
-            const pct = total > 0 ? Math.max((d.balance / total) * 100, 0) : 0;
+            const pct = realTotal > 0 ? Math.max((d.balance / realTotal) * 100, 0) : 0;
             return (
               <div key={d.name}>
                 <div className="flex justify-between items-center mb-0.5">
@@ -395,6 +413,15 @@ export default function DashboardHome() {
   const ccAccounts     = useMemo(() => accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD), [accounts]);
   const balanceMap     = useMemo(() => buildBalanceMap(accounts, transactions), [accounts, transactions]);
 
+  // ── Income/Expense split by status ──────────────────────────────────────────
+  // CONFIRMED/RECONCILED = actually moved money
+  const monthIncomeConfirmed  = thisMonthTxs.filter(t => t.type.trim() === "INCOME"  && (t.status.trim() === "CONFIRMED" || t.status.trim() === "RECONCILED")).reduce((s, t) => s + Number(t.amount), 0);
+  const monthExpenseConfirmed = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE" && (t.status.trim() === "CONFIRMED" || t.status.trim() === "RECONCILED")).reduce((s, t) => s + Number(t.amount), 0);
+  // PENDING = still outstanding
+  const monthIncomePending    = thisMonthTxs.filter(t => t.type.trim() === "INCOME"  && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
+  const monthExpensePending   = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE" && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
+
+  // Legacy: total (all statuses) for trend comparison
   const monthIncome  = thisMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
   const monthExpense = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
   const prevIncome   = prevMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
@@ -422,55 +449,84 @@ export default function DashboardHome() {
     <div className="-mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <OnboardingTour />
       
-      {/* ── KPI Row ── */}
+      {/* ── KPI Row — 3 cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <BalanceCard accounts={accounts} transactions={transactions} />
 
-        {/* Receitas KPI */}
+        {/* ── Receitas Card ── */}
         <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
           <div className="flex justify-between items-start">
             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receitas do Mês</p>
-            <button 
+            <button
               onClick={() => handleOpenTx('INCOME')}
               className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-bold text-xs transition-colors shadow-lg shadow-emerald-500/20"
             >
-              <ArrowUpCircle size={14} />
-              Receita
+              <ArrowUpCircle size={14} /> Receita
             </button>
           </div>
+
+          {/* Main value — confirmed */}
           <div>
-            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">{fmt(monthIncome)}</h2>
-            <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
+            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight tabular-nums">{fmt(monthIncomeConfirmed)}</h2>
+            <p className="text-xs text-emerald-600 font-bold mt-0.5">Confirmadas</p>
           </div>
-          <div className={`flex items-center gap-1 text-[11px] font-bold ${incomeTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-            {incomeTrend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-            {Math.abs(incomeTrend).toFixed(1)}% em relação ao mês anterior
+
+          {/* Pending sub-row */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-50">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">A Receber</p>
+              <p className={`text-sm font-black mt-0.5 tabular-nums ${monthIncomePending > 0 ? "text-amber-600" : "text-zinc-300"}`}>
+                {fmt(monthIncomePending)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Tendência</p>
+              <div className={`flex items-center justify-end gap-1 mt-0.5 text-[11px] font-bold ${incomeTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                {incomeTrend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                {Math.abs(incomeTrend).toFixed(1)}%
+              </div>
+            </div>
           </div>
         </BaseCard>
 
-        {/* Despesas KPI */}
+        {/* ── Despesas Card ── */}
         <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
           <div className="flex justify-between items-start">
             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Despesas do Mês</p>
-            <button 
+            <button
               onClick={() => handleOpenTx('EXPENSE')}
               className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition-colors"
             >
-              <ArrowDownCircle size={14} />
-              Despesa
+              <ArrowDownCircle size={14} /> Despesa
             </button>
           </div>
+
+          {/* Main value — confirmed */}
           <div>
-            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">{fmt(monthExpense)}</h2>
-            <p className="text-xs text-zinc-400 font-medium mt-0.5">{format(now, "MMMM yyyy", { locale: ptBR })}</p>
+            <h2 className="text-2xl font-bold text-zinc-900 tracking-tight tabular-nums">{fmt(monthExpenseConfirmed)}</h2>
+            <p className="text-xs text-rose-500 font-bold mt-0.5">Confirmadas</p>
           </div>
-          <div className={`flex items-center gap-1 text-[11px] font-bold ${expenseTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-            {expenseTrend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-            {Math.abs(expenseTrend).toFixed(1)}% em relação ao mês anterior
+
+          {/* Pending sub-row */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-50">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">A Pagar</p>
+              <p className={`text-sm font-black mt-0.5 tabular-nums ${monthExpensePending > 0 ? "text-rose-600" : "text-zinc-300"}`}>
+                {fmt(monthExpensePending)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Tendência</p>
+              <div className={`flex items-center justify-end gap-1 mt-0.5 text-[11px] font-bold ${expenseTrend >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                {expenseTrend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                {Math.abs(expenseTrend).toFixed(1)}%
+              </div>
+            </div>
           </div>
         </BaseCard>
 
       </div>
+
 
       {/* ── Main Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">

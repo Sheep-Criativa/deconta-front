@@ -213,8 +213,8 @@ export default function CalendarTransactions() {
                   {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="bg-white rounded-xl shadow-xl border border-zinc-100 p-2 max-h-[300px] overflow-y-auto min-w-[160px]">
-                {Array.from({ length: 48 }).map((_, i) => {
+              <DropdownMenuContent align="center" className="bg-white rounded-2xl shadow-xl py-2 w-48 max-h-[300px] overflow-y-auto border border-zinc-100">
+                {[...Array(25)].map((_, i) => {
                   const date = addMonths(startOfMonth(new Date()), i - 12); 
                   const isCur = isSameMonth(date, currentMonth);
                   return (
