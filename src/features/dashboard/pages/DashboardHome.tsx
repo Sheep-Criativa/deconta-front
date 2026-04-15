@@ -33,8 +33,8 @@ function buildMonthlyFlow(transactions: Transaction[]) {
     const key = tx.date.slice(0, 7);
     if (!months[key]) return;
     const t = tx.type.trim();
-    if (t === "INCOME")  months[key].receita  += Number(tx.amount);
-    if (t === "EXPENSE") months[key].despesa  += Number(tx.amount);
+    if (t === "INCOME") months[key].receita += Number(tx.amount);
+    if (t === "EXPENSE") months[key].despesa += Number(tx.amount);
   });
   return Object.values(months);
 }
@@ -76,38 +76,31 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const ACCOUNT_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#8b5cf6", "#3b82f6", "#ec4899"];
 
 function BalanceCard({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
-  const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
-  const balanceMap    = buildBalanceMap(accounts, transactions);
-  const realTotal     = computeTotalBalance(accounts, transactions);
-  const simTotal      = computeTotalSimulatedBalance(accounts, transactions);
+  const realTotal = computeTotalBalance(accounts, transactions);
+  const simTotal = computeTotalSimulatedBalance(accounts, transactions);
   const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const diff = simTotal - realTotal;
 
-  const chartData = nonCcAccounts.map((a, i) => ({
-    name:    a.name,
-    balance: balanceMap.get(a.id) ?? 0,
-    color:   ACCOUNT_COLORS[i % ACCOUNT_COLORS.length],
-  }));
-
   return (
-    <BaseCard id="tour-dashboard-balance" className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none">
-      {/* Header row */}
-      <div className="flex justify-between items-start">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Real</p>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
-          <Wallet size={17} />
+    <BaseCard id="tour-dashboard-balance" className="flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none justify-between">
+      <div>
+        {/* Header row */}
+        <div className="flex justify-between items-start mb-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Real</p>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
+            <Wallet size={17} />
+          </div>
+        </div>
+
+        {/* Real balance */}
+        <div>
+          <h2 className={`text-2xl font-bold tracking-tight ${realTotal >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
+            {fmt(realTotal)}
+          </h2>
         </div>
       </div>
 
-      {/* Real balance */}
-      <div>
-        <h2 className={`text-2xl font-bold tracking-tight ${realTotal >= 0 ? "text-zinc-900" : "text-rose-500"}`}>
-          {fmt(realTotal)}
-        </h2>
-        <p className="text-xs text-zinc-400 font-medium mt-0.5">
-          {nonCcAccounts.length} conta{nonCcAccounts.length !== 1 ? "s" : ""} · apenas confirmadas
-        </p>
-      </div>
+      <div className="border-t border-zinc-100/80 pt-1"></div>
 
       {/* Simulated balance */}
       <div className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${diff < 0 ? "bg-rose-50" : "bg-zinc-50"}`}>
@@ -124,17 +117,40 @@ function BalanceCard({ accounts, transactions }: { accounts: Account[]; transact
           </p>
         </div>
       </div>
+    </BaseCard>
+  );
+}
 
-      {/* Mini per-account bar chart */}
-      {chartData.length > 0 && (
-        <div className="space-y-1.5 pt-1">
+// ─── Account Balances Card (Separated) ───────────────────────────────────────
+function AccountBalancesCard({ accounts, transactions, className }: { accounts: Account[]; transactions: Transaction[]; className?: string }) {
+  const nonCcAccounts = accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD);
+  const balanceMap = buildBalanceMap(accounts, transactions);
+  const realTotal = computeTotalBalance(accounts, transactions);
+  const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+  const chartData = nonCcAccounts.map((a, i) => ({
+    name: a.name,
+    balance: balanceMap.get(a.id) ?? 0,
+    color: ACCOUNT_COLORS[i % ACCOUNT_COLORS.length],
+  }));
+
+  return (
+    <BaseCard className={`flex flex-col gap-3 rounded-3xl border border-zinc-100 shadow-none ${className || ''}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldos por Conta</h3>
+      </div>
+
+      {chartData.length === 0 ? (
+        <p className="text-xs text-zinc-400 font-medium py-4 text-center">Nenhuma conta com saldo.</p>
+      ) : (
+        <div className="space-y-4 flex-1 overflow-y-auto pr-1">
           {chartData.map(d => {
             const pct = realTotal > 0 ? Math.max((d.balance / realTotal) * 100, 0) : 0;
             return (
               <div key={d.name}>
-                <div className="flex justify-between items-center mb-0.5">
-                  <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[60%]">{d.name}</span>
-                  <span className="text-[10px] font-black text-zinc-700">{fmt(d.balance)}</span>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[11px] font-bold text-zinc-600 truncate max-w-[60%]">{d.name}</span>
+                  <span className="text-[11px] font-black text-zinc-800">{fmt(d.balance)}</span>
                 </div>
                 <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                   <div
@@ -270,10 +286,10 @@ const renderDonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent 
 function DashboardCalendar({ transactions, className }: { transactions: Transaction[]; className?: string }) {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
-  
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  
+
   // Calendário sempre começa na segunda-feira
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
@@ -288,24 +304,24 @@ function DashboardCalendar({ transactions, className }: { transactions: Transact
           <h3 className="text-sm font-bold text-zinc-800 tracking-wide">Calendário Financeiro</h3>
         </div>
         <div className="flex items-center gap-4">
-           <div className="flex items-center gap-1.5 bg-black/80 border border-white/5 rounded-xl px-1.5 py-1">
-             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
-               <ChevronLeft size={16} />
-             </button>
-             <span className="text-xs font-bold text-white px-2 tracking-wide capitalize min-w-[100px] text-center">
-               {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-             </span>
-             <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
-               <ChevronRight size={16} />
-             </button>
-           </div>
-           
-           <button onClick={() => navigate("/history/calendar")} className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest hidden sm:flex items-center gap-1 bg-emerald-500/10 px-3 py-2 rounded-lg">
-             Expandir <ArrowUpRight size={12} />
-           </button>
+          <div className="flex items-center gap-1.5 bg-black/80 border border-white/5 rounded-xl px-1.5 py-1">
+            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-bold text-white px-2 tracking-wide capitalize min-w-[100px] text-center">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-white/60 hover:text-white p-1 transition-colors rounded-xl">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <button onClick={() => navigate("/history/calendar")} className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest hidden sm:flex items-center gap-1 bg-emerald-500/10 px-3 py-2 rounded-lg">
+            Expandir <ArrowUpRight size={12} />
+          </button>
         </div>
       </div>
-      
+
       <div className="overflow-x-auto custom-scrollbar -mx-6 px-6 pb-2">
         <div className="min-w-[600px]">
           <div className="grid grid-cols-7 mb-3 border-b border-white/5 pb-2">
@@ -315,24 +331,24 @@ function DashboardCalendar({ transactions, className }: { transactions: Transact
               </div>
             ))}
           </div>
-          
+
           <div className="grid grid-cols-7 border-t border-l border-zinc-100 bg-white rounded-xl overflow-hidden flex-1">
             {days.map(day => {
               const isCur = isSameMonth(day, monthStart);
               const dayTxs = transactions.filter(t => isSameDay(parseISO(t.date), day));
-              const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s,t) => s + Number(t.amount), 0);
-              const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s,t) => s + Number(t.amount), 0);
+              const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
+              const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
 
               return (
-                 <div 
-                   key={day.toString()} 
-                   className={`min-h-[75px] p-2 border-b border-r border-black/10 flex flex-col gap-1 transition-colors hover:bg-white/5 cursor-pointer ${!isCur ? 'opacity-30' : ''}`} 
-                   onClick={() => navigate("/history/calendar")}
-                 >
-                   <span className={`text-[10px] font-bold ${isToday(day) ? 'text-emerald-500' : 'text-zinc-500'} mb-1 ml-1`}>{format(day, "d")}</span>
-                   {incomes > 0 && <div className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded truncate border border-emerald-500/20">+ {incomes.toLocaleString("pt-BR", {minimumFractionDigits: 1})}</div>}
-                   {expenses > 0 && <div className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded truncate border border-rose-500/20">- {expenses.toLocaleString("pt-BR", {minimumFractionDigits: 1})}</div>}
-                 </div>
+                <div
+                  key={day.toString()}
+                  className={`min-h-[75px] p-2 border-b border-r border-black/10 flex flex-col gap-1 transition-colors hover:bg-white/5 cursor-pointer ${!isCur ? 'opacity-30' : ''}`}
+                  onClick={() => navigate("/history/calendar")}
+                >
+                  <span className={`text-[10px] font-bold ${isToday(day) ? 'text-emerald-500' : 'text-zinc-500'} mb-1 ml-1`}>{format(day, "d")}</span>
+                  {incomes > 0 && <div className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded truncate border border-emerald-500/20">+ {incomes.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</div>}
+                  {expenses > 0 && <div className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded truncate border border-rose-500/20">- {expenses.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</div>}
+                </div>
               );
             })}
           </div>
@@ -345,11 +361,11 @@ function DashboardCalendar({ transactions, className }: { transactions: Transact
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DashboardHome() {
   const { user } = useAuth();
-  const [accounts,     setAccounts]     = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [statements,   setStatements]   = useState<Statement[]>([]);
-  const [categories,   setCategories]   = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
-  const [loading,      setLoading]      = useState(true);
+  const [statements, setStatements] = useState<Statement[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isTxDialogOp, setIsTxDialogOpen] = useState(false);
   const [txDialogType, setTxDialogType] = useState<TransactionType>("EXPENSE");
@@ -393,7 +409,7 @@ export default function DashboardHome() {
   // KPI calculations
   const now = new Date();
   const monthStart = startOfMonth(now);
-  const monthEnd   = endOfMonth(now);
+  const monthEnd = endOfMonth(now);
 
   const thisMonthTxs = useMemo(() => transactions.filter(tx => {
     const d = parseISO(tx.date);
@@ -410,29 +426,29 @@ export default function DashboardHome() {
   const [accountTab, setAccountTab] = useState<"contas" | "credito">("contas");
 
   const nonCcAccounts = useMemo(() => accounts.filter(a => a.type.trim() !== AccountType.CREDIT_CARD), [accounts]);
-  const ccAccounts     = useMemo(() => accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD), [accounts]);
-  const balanceMap     = useMemo(() => buildBalanceMap(accounts, transactions), [accounts, transactions]);
+  const ccAccounts = useMemo(() => accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD), [accounts]);
+  const balanceMap = useMemo(() => buildBalanceMap(accounts, transactions), [accounts, transactions]);
 
   // ── Income/Expense split by status ──────────────────────────────────────────
   // CONFIRMED/RECONCILED = actually moved money
-  const monthIncomeConfirmed  = thisMonthTxs.filter(t => t.type.trim() === "INCOME"  && (t.status.trim() === "CONFIRMED" || t.status.trim() === "RECONCILED")).reduce((s, t) => s + Number(t.amount), 0);
+  const monthIncomeConfirmed = thisMonthTxs.filter(t => t.type.trim() === "INCOME" && (t.status.trim() === "CONFIRMED" || t.status.trim() === "RECONCILED")).reduce((s, t) => s + Number(t.amount), 0);
   const monthExpenseConfirmed = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE" && (t.status.trim() === "CONFIRMED" || t.status.trim() === "RECONCILED")).reduce((s, t) => s + Number(t.amount), 0);
   // PENDING = still outstanding
-  const monthIncomePending    = thisMonthTxs.filter(t => t.type.trim() === "INCOME"  && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
-  const monthExpensePending   = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE" && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
+  const monthIncomePending = thisMonthTxs.filter(t => t.type.trim() === "INCOME" && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
+  const monthExpensePending = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE" && t.status.trim() === "PENDING").reduce((s, t) => s + Number(t.amount), 0);
 
   // Legacy: total (all statuses) for trend comparison
-  const monthIncome  = thisMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
+  const monthIncome = thisMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
   const monthExpense = thisMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
-  const prevIncome   = prevMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
-  const prevExpense  = prevMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+  const prevIncome = prevMonthTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
+  const prevExpense = prevMonthTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
 
-  const incomeTrend  = prevIncome  > 0 ? ((monthIncome  - prevIncome)  / prevIncome)  * 100 : 0;
+  const incomeTrend = prevIncome > 0 ? ((monthIncome - prevIncome) / prevIncome) * 100 : 0;
   const expenseTrend = prevExpense > 0 ? ((monthExpense - prevExpense) / prevExpense) * 100 : 0;
 
-  const monthlyFlow   = useMemo(() => buildMonthlyFlow(transactions), [transactions]);
-  const categoryData  = useMemo(() => buildCategoryData(transactions, categories), [transactions, categories]);
-  const recentTxs     = useMemo(() => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7), [transactions]);
+  const monthlyFlow = useMemo(() => buildMonthlyFlow(transactions), [transactions]);
+  const categoryData = useMemo(() => buildCategoryData(transactions, categories), [transactions, categories]);
+  const recentTxs = useMemo(() => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7), [transactions]);
   const openStatements = statements.filter(s => s.status.trim() === "OPEN" || s.status.trim() === "CLOSED");
 
   const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -448,10 +464,11 @@ export default function DashboardHome() {
   return (
     <div className="-mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <OnboardingTour />
-      
-      {/* ── KPI Row — 3 cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      {/* ── KPI Row — 4 cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <BalanceCard accounts={accounts} transactions={transactions} />
+        <AccountBalancesCard accounts={accounts} transactions={transactions} />
 
         {/* ── Receitas Card ── */}
         <BaseCard className="flex flex-col gap-4 rounded-3xl border border-zinc-100 shadow-none">
@@ -531,195 +548,193 @@ export default function DashboardHome() {
       {/* ── Main Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
-        {/* --- ROW 1 --- */}
         {/* Area/Bar Chart: Income vs Expense */}
         <BaseCard id="tour-dashboard-flow" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-8 flex flex-col h-full">
           <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-sm font-bold text-zinc-900">Fluxo de Caixa</h3>
-                <p className="text-[11px] text-zinc-400 font-medium">Últimos 6 meses</p>
-              </div>
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900">Fluxo de Caixa</h3>
+              <p className="text-[11px] text-zinc-400 font-medium">Últimos 6 meses</p>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={monthlyFlow} barGap={4} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 700, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
-                <RechartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[6, 6, 0, 0]} />
-                <Legend formatter={(val) => <span style={{ fontSize: 11, fontWeight: 700, color: "#71717a" }}>{val}</span>} />
-              </BarChart>
-            </ResponsiveContainer>
-          </BaseCard>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={monthlyFlow} barGap={4} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 700, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+              <RechartTooltip content={<CustomTooltip />} />
+              <Bar dataKey="receita" name="Receita" fill="#10b981" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="despesa" name="Despesa" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+              <Legend formatter={(val) => <span style={{ fontSize: 11, fontWeight: 700, color: "#71717a" }}>{val}</span>} />
+            </BarChart>
+          </ResponsiveContainer>
+        </BaseCard>
 
-          {/* Donut: Gastos por Categoria */}
-          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
-            <h3 className="text-sm font-bold text-zinc-900 mb-4">Gastos por Categoria</h3>
-            {categoryData.length === 0 ? (
-              <p className="text-xs text-zinc-400 text-center py-8">Sem dados este mês.</p>
-            ) : (
-              <div className="flex-1 flex flex-col">
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      dataKey="value"
-                      labelLine={false}
-                      label={renderDonutLabel}
-                    >
-                      {categoryData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color || `hsl(${i * 55}, 65%, 55%)`} />
-                      ))}
-                    </Pie>
-                    <RechartTooltip
-                      formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-2 mt-auto">
-                  {categoryData.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color || `hsl(${i * 55}, 65%, 55%)` }} />
-                        <span className="text-[11px] font-bold text-zinc-600 truncate max-w-[120px]">{c.name}</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-zinc-800">
-                        R$ {c.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
+        {/* Donut: Gastos por Categoria */}
+        <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
+          <h3 className="text-sm font-bold text-zinc-900 mb-4">Gastos por Categoria</h3>
+          {categoryData.length === 0 ? (
+            <p className="text-xs text-zinc-400 text-center py-8">Sem dados este mês.</p>
+          ) : (
+            <div className="flex-1 flex flex-col">
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    dataKey="value"
+                    labelLine={false}
+                    label={renderDonutLabel}
+                  >
+                    {categoryData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color || `hsl(${i * 55}, 65%, 55%)`} />
+                    ))}
+                  </Pie>
+                  <RechartTooltip
+                    formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-2 mt-auto">
+                {categoryData.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color || `hsl(${i * 55}, 65%, 55%)` }} />
+                      <span className="text-[11px] font-bold text-zinc-600 truncate max-w-[120px]">{c.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <span className="text-[11px] font-bold text-zinc-800">
+                      R$ {c.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
-          </BaseCard>
-
-          {/* --- ROW 2 --- */}
-          {/* Dashboard Calendar Preview */}
-          <DashboardCalendar transactions={transactions} className="lg:col-span-8" />
-
-          {/* Recent Transactions */}
-          <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
-                  <List size={14} />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
-              </div>
-              <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
-                Ver todas →
-              </a>
             </div>
-            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-              {recentTxs.length === 0 ? (
-                <p className="text-sm text-zinc-400 text-center py-8">Nenhuma transação ainda.</p>
-              ) : (
-                recentTxs.map(tx => (
-                  <RecentTxRow key={tx.id} tx={tx} accounts={accounts} categories={categories} />
-                ))
-              )}
-            </div>
-          </BaseCard>
-
-          {/* --- ROW 3 --- */}
-          {/* Credit Card Statements */}
-          {openStatements.length > 0 && (
-            <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
-                  <CreditCard size={14} />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900">Faturas Abertas</h3>
-              </div>
-              <div className="space-y-3 flex-1">
-                {openStatements.slice(0, 3).map(s => {
-                  const acc = accounts.find(a => a.id === s.accountId);
-                  const isOpen = s.status.trim() === "OPEN";
-                  return (
-                    <div key={s.id} className={`flex items-center justify-between p-3 rounded-2xl ${isOpen ? "bg-emerald-50" : "bg-amber-50"}`}>
-                      <div>
-                        <p className="text-xs font-bold text-zinc-900">{acc?.name ?? "Cartão"}</p>
-                        <p className="text-[10px] text-zinc-500 font-medium">
-                          Vence {format(parseISO(s.dueDate), "dd/MM")}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${isOpen ? "text-emerald-700" : "text-amber-700"}`}>
-                          R$ {Number(s.totalAmount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className={`text-[10px] font-bold ${isOpen ? "text-emerald-500" : "text-amber-500"}`}>
-                          {isOpen ? "Aberta" : "Fechada"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </BaseCard>
           )}
+        </BaseCard>
 
-          {/* ─── Suas Contas ─── */}
-          <BaseCard className={`rounded-3xl border border-zinc-100 shadow-none flex flex-col h-full ${openStatements.length > 0 ? "lg:col-span-8" : "lg:col-span-12"}`}>
-            {/* Header + tabs */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-zinc-900">Suas Contas</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex bg-zinc-100 rounded-full p-0.5 gap-0.5">
-                  {(["contas", "credito"] as const).map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setAccountTab(tab)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        accountTab === tab
-                          ? "bg-white text-zinc-900 shadow-sm"
-                          : "text-zinc-400 hover:text-zinc-600"
-                      }`}
-                    >
-                      {tab === "contas" ? `Contas (${nonCcAccounts.length})` : `Crédito (${ccAccounts.length})`}
-                    </button>
-                  ))}
-                </div>
-                <a href="/account" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
+        {/* --- ROW 2 --- */}
+        {/* Dashboard Calendar Preview */}
+        <DashboardCalendar transactions={transactions} className="lg:col-span-8" />
+
+        {/* Recent Transactions */}
+        <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
+                <List size={14} />
               </div>
+              <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
             </div>
+            <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
+              Ver todas →
+            </a>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+            {recentTxs.length === 0 ? (
+              <p className="text-sm text-zinc-400 text-center py-8">Nenhuma transação ainda.</p>
+            ) : (
+              recentTxs.map(tx => (
+                <RecentTxRow key={tx.id} tx={tx} accounts={accounts} categories={categories} />
+              ))
+            )}
+          </div>
+        </BaseCard>
 
-            {/* Cards strip */}
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none flex-1">
-              {accountTab === "contas" ? (
-                nonCcAccounts.length > 0 ? nonCcAccounts.map(acc => (
-                  <AccountMiniCard
+        {/* --- ROW 3 --- */}
+        {/* Credit Card Statements */}
+        {openStatements.length > 0 && (
+          <BaseCard className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
+                <CreditCard size={14} />
+              </div>
+              <h3 className="text-sm font-bold text-zinc-900">Faturas Abertas</h3>
+            </div>
+            <div className="space-y-3 flex-1">
+              {openStatements.slice(0, 3).map(s => {
+                const acc = accounts.find(a => a.id === s.accountId);
+                const isOpen = s.status.trim() === "OPEN";
+                return (
+                  <div key={s.id} className={`flex items-center justify-between p-3 rounded-2xl ${isOpen ? "bg-emerald-50" : "bg-amber-50"}`}>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900">{acc?.name ?? "Cartão"}</p>
+                      <p className="text-[10px] text-zinc-500 font-medium">
+                        Vence {format(parseISO(s.dueDate), "dd/MM")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${isOpen ? "text-emerald-700" : "text-amber-700"}`}>
+                        R$ {Number(s.totalAmount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className={`text-[10px] font-bold ${isOpen ? "text-emerald-500" : "text-amber-500"}`}>
+                        {isOpen ? "Aberta" : "Fechada"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </BaseCard>
+        )}
+
+        {/* ─── Suas Contas ─── */}
+        <BaseCard className={`rounded-3xl border border-zinc-100 shadow-none flex flex-col h-full ${openStatements.length > 0 ? "lg:col-span-8" : "lg:col-span-12"}`}>
+          {/* Header + tabs */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-zinc-900">Suas Contas</h3>
+            <div className="flex items-center gap-4">
+              <div className="flex bg-zinc-100 rounded-full p-0.5 gap-0.5">
+                {(["contas", "credito"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setAccountTab(tab)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${accountTab === tab
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-600"
+                      }`}
+                  >
+                    {tab === "contas" ? `Contas (${nonCcAccounts.length})` : `Crédito (${ccAccounts.length})`}
+                  </button>
+                ))}
+              </div>
+              <a href="/account" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
+            </div>
+          </div>
+
+          {/* Cards strip */}
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none flex-1">
+            {accountTab === "contas" ? (
+              nonCcAccounts.length > 0 ? nonCcAccounts.map(acc => (
+                <AccountMiniCard
+                  key={acc.id}
+                  account={acc}
+                  computedBalance={balanceMap.get(acc.id) ?? 0}
+                />
+              )) : (
+                <p className="text-xs text-zinc-400 font-medium py-4">Nenhuma conta bancária cadastrada.</p>
+              )
+            ) : (
+              ccAccounts.length > 0 ? ccAccounts.map(acc => {
+                const stmtRecords = statements.filter(s => s.accountId === acc.id);
+                const unpaidAmount = stmtRecords
+                  .filter(s => s.status.trim() !== "PAID")
+                  .reduce((sum, s) => sum + Number(s.totalAmount ?? 0), 0);
+
+                return (
+                  <CreditMiniCard
                     key={acc.id}
                     account={acc}
-                    computedBalance={balanceMap.get(acc.id) ?? 0}
+                    statementAmount={unpaidAmount > 0 ? unpaidAmount : null}
                   />
-                )) : (
-                  <p className="text-xs text-zinc-400 font-medium py-4">Nenhuma conta bancária cadastrada.</p>
-                )
-              ) : (
-                ccAccounts.length > 0 ? ccAccounts.map(acc => {
-                  const stmtRecords = statements.filter(s => s.accountId === acc.id);
-                  const unpaidAmount = stmtRecords
-                    .filter(s => s.status.trim() !== "PAID")
-                    .reduce((sum, s) => sum + Number(s.totalAmount ?? 0), 0);
-                  
-                  return (
-                    <CreditMiniCard
-                      key={acc.id}
-                      account={acc}
-                      statementAmount={unpaidAmount > 0 ? unpaidAmount : null}
-                    />
-                  );
-                }) : (
-                  <p className="text-xs text-zinc-400 font-medium py-4">Nenhum cartão de crédito cadastrado.</p>
-                )
-              )}
-            </div>
-          </BaseCard>
+                );
+              }) : (
+                <p className="text-xs text-zinc-400 font-medium py-4">Nenhum cartão de crédito cadastrado.</p>
+              )
+            )}
+          </div>
+        </BaseCard>
 
       </div>
 
