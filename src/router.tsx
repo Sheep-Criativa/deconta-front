@@ -10,6 +10,7 @@ import Categories from "@/features/dashboard/pages/Categories";
 import CreditCards from "@/features/dashboard/pages/CreditCards";
 import Transactions from "@/features/dashboard/pages/Transactions";
 import CalendarTransactions from "@/features/dashboard/pages/CalendarTransactions";
+import RecurrencesPage from "@/features/dashboard/pages/Recurrences";
 import StatementDetail from "@/features/dashboard/pages/StatementDetail";
 import ReportBug from "@/features/dashboard/pages/ReportBug";
 import Help from "@/features/dashboard/pages/Help";
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
               { path: "/cards",       element: <CreditCards /> },
               { path: "/history",     element: <Transactions /> },
               { path: "/history/calendar", element: <CalendarTransactions /> },
+              { path: "/history/recurrences", element: <RecurrencesPage /> },
               { path: "/reports",     element: <ReportsPage /> },
               { path: "/profile",     element: <Profile /> },
               { path: "/cards/:cardId/statement/:statementId", element: <StatementDetail /> },

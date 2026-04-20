@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,13 +25,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Plus, Landmark, CheckCircle2, Clock3, ShieldCheck, Info } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, CalendarDays, CheckCircle2, Clock3, CreditCard, Info, Landmark, Plus, Repeat, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
@@ -39,8 +40,22 @@ import { getAccounts, type Account, AccountType } from "../services/account.serv
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { createTransaction, updateTransaction, type Transaction, type TransactionType, type TransactionStatus } from "../services/transaction.service";
+import { createRecurrence, type CreateRecurrenceDTO } from "../services/recurrence.service";
 import { CreateCategoryDialog } from "./CreateCategoryDialog";
 import { CreateResponsibleDialog } from "./CreateResponsibleDialog";
+import {
+  buildRecurrenceRule,
+  getRecurrencePreviewDates,
+  recurrenceRuleSummary,
+  toRRuleExpression,
+  type RecurrenceEndMode,
+  type RecurrenceFrequency,
+  type RecurrenceRuleFormModel,
+  validateRecurrenceRule,
+  WEEKDAY_OPTIONS,
+  type WeekdayId,
+} from "../utils/recurrenceRule";
+import { decideTransactionSubmitMode } from "../utils/transactionSubmitDecision";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -59,6 +74,15 @@ const formSchema = z.object({
   // Credit card only
   installmentTotal: z.coerce.number().min(1).max(36).optional(),
   notes: z.string().max(1000).optional(),
+  recurring: z.boolean().default(false),
+  recurrenceFrequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).default("MONTHLY"),
+  recurrenceInterval: z.coerce.number().int().min(1).max(365).default(1),
+  recurrenceStartDate: z.string().optional(),
+  recurrenceEndMode: z.enum(["NEVER", "UNTIL", "COUNT"]).default("NEVER"),
+  recurrenceUntilDate: z.string().optional(),
+  recurrenceCount: z.coerce.number().int().min(1).max(999).optional(),
+  recurrenceByweekday: z.array(z.string()).default([]),
+  recurrenceBymonthday: z.coerce.number().int().min(1).max(31).optional(),
 });
 
 interface CreateTransactionDialogProps {
@@ -102,17 +126,95 @@ export function CreateTransactionDialog({
       status: "CONFIRMED",
       date: format(new Date(), "yyyy-MM-dd"),
       paymentDate: format(new Date(), "yyyy-MM-dd"),
+      categoryId: 0,
+      responsibleId: 0,
       amount: 0,
       installmentTotal: 1,
       description: "",
       notes: "",
+      recurring: false,
+      recurrenceFrequency: "MONTHLY",
+      recurrenceInterval: 1,
+      recurrenceStartDate: format(new Date(), "yyyy-MM-dd"),
+      recurrenceEndMode: "NEVER",
+      recurrenceUntilDate: undefined,
+      recurrenceCount: undefined,
+      recurrenceByweekday: [],
+      recurrenceBymonthday: new Date().getDate(),
     },
   });
 
   const transactionType = form.watch("type");
   const accountId = form.watch("accountId");
+  const isRecurring = form.watch("recurring");
+  const recurrenceFrequency = form.watch("recurrenceFrequency") as RecurrenceFrequency;
+  const recurrenceEndMode = form.watch("recurrenceEndMode") as RecurrenceEndMode;
+  const recurrenceStartDate = form.watch("recurrenceStartDate");
+  const recurrenceByweekday = form.watch("recurrenceByweekday") as WeekdayId[];
+  const recurrenceBymonthday = form.watch("recurrenceBymonthday");
+  const recurrenceInterval = form.watch("recurrenceInterval");
+  const recurrenceCount = form.watch("recurrenceCount");
+  const recurrenceUntilDate = form.watch("recurrenceUntilDate");
   // CC context: explicit account lock, onlyCreditCards filter, or selected account is CC
   const isCreditCard = !!defaultAccountId || onlyCreditCards || selectedAccount?.type.trim() === AccountType.CREDIT_CARD;
+
+  const recurrenceModel = useMemo<RecurrenceRuleFormModel>(() => {
+    const startDate = recurrenceStartDate || form.getValues("date");
+    const startDay = Number(startDate?.split("-")[2]);
+    const monthlyDay = Number(recurrenceBymonthday ?? startDay);
+
+    return {
+      frequency: recurrenceFrequency,
+      interval: Math.max(1, Number(recurrenceInterval) || 1),
+      startDate,
+      endMode: recurrenceEndMode,
+      untilDate: recurrenceEndMode === "UNTIL" ? recurrenceUntilDate : undefined,
+      count: recurrenceEndMode === "COUNT" ? recurrenceCount : undefined,
+      byweekday: recurrenceFrequency === "WEEKLY" ? recurrenceByweekday : [],
+      bymonthday:
+        recurrenceFrequency === "MONTHLY" && monthlyDay >= 1 && monthlyDay <= 31
+          ? monthlyDay
+          : undefined,
+    };
+  }, [
+    recurrenceFrequency,
+    recurrenceInterval,
+    recurrenceStartDate,
+    recurrenceEndMode,
+    recurrenceUntilDate,
+    recurrenceCount,
+    recurrenceByweekday,
+    recurrenceBymonthday,
+    form,
+  ]);
+
+  const recurrenceRule = useMemo(() => {
+    if (!isRecurring || isEditMode) return "";
+    try {
+      return buildRecurrenceRule(recurrenceModel);
+    } catch {
+      return "";
+    }
+  }, [isRecurring, isEditMode, recurrenceModel]);
+
+  const recurrenceRuleExpression = useMemo(() => {
+    if (!recurrenceRule) return "";
+    try {
+      return toRRuleExpression(recurrenceRule);
+    } catch {
+      return "";
+    }
+  }, [recurrenceRule]);
+
+  const recurrencePreviewDates = useMemo(() => {
+    if (!recurrenceRule) return [];
+    return getRecurrencePreviewDates(recurrenceRule, 4);
+  }, [recurrenceRule]);
+
+  const recurrenceSummaryText = useMemo(() => {
+    if (!recurrenceRule) return "";
+    return recurrenceRuleSummary(recurrenceModel);
+  }, [recurrenceRule, recurrenceModel]);
 
   // Load select options
   useEffect(() => {
@@ -173,8 +275,8 @@ export function CreateTransactionDialog({
       if (transaction) {
         form.reset({
           accountId: transaction.accountId,
-          categoryId: transaction.categoryId ?? undefined,
-          responsibleId: transaction.responsibleId ?? undefined,
+          categoryId: transaction.categoryId ?? 0,
+          responsibleId: transaction.responsibleId ?? 0,
           type: transaction.type.trim() as TransactionType,
           status: transaction.status.trim() as TransactionStatus,
           date: transaction.date.split("T")[0],
@@ -183,17 +285,38 @@ export function CreateTransactionDialog({
           installmentTotal: transaction.installmentTotal ?? 1,
           description: transaction.description ?? "",
           notes: transaction.notes ?? "",
+          recurring: false,
+          recurrenceFrequency: "MONTHLY",
+          recurrenceInterval: 1,
+          recurrenceStartDate: transaction.date.split("T")[0],
+          recurrenceEndMode: "NEVER",
+          recurrenceUntilDate: undefined,
+          recurrenceCount: undefined,
+          recurrenceByweekday: [],
+          recurrenceBymonthday: Number(transaction.date.split("T")[0].split("-")[2]),
         });
       } else {
+        const baseDate = defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
         form.reset({
           type: defaultType,
           status: "CONFIRMED",
-          date: defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
-          paymentDate: defaultDate ? format(defaultDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          date: baseDate,
+          paymentDate: baseDate,
+          categoryId: 0,
+          responsibleId: 0,
           amount: 0,
           installmentTotal: 1,
           description: "",
           notes: "",
+          recurring: false,
+          recurrenceFrequency: "MONTHLY",
+          recurrenceInterval: 1,
+          recurrenceStartDate: baseDate,
+          recurrenceEndMode: "NEVER",
+          recurrenceUntilDate: undefined,
+          recurrenceCount: undefined,
+          recurrenceByweekday: [],
+          recurrenceBymonthday: Number(baseDate.split("-")[2]),
           // Pre-select the account if provided
           ...(defaultAccountId ? { accountId: defaultAccountId } : {}),
         });
@@ -278,20 +401,22 @@ export function CreateTransactionDialog({
         }
       }
 
-      // Se for cartão de crédito, o paymentDate original da UI é desnecessário.
-      // O valor da transação deve ser dividido pelas parcelas. 
       const submitDate = values.date;
       const submitPaymentDate = isCreditCard ? values.date : values.paymentDate;
-      const finalAmount = (isCreditCard && values.installmentTotal && values.installmentTotal > 1)
-        ? Number((values.amount / values.installmentTotal).toFixed(2))
+      const shouldSplitInstallments = isCreditCard && !values.recurring && (values.installmentTotal ?? 1) > 1;
+      const finalAmount = shouldSplitInstallments
+        ? Number((values.amount / (values.installmentTotal ?? 1)).toFixed(2))
         : values.amount;
 
       const baseDate = new Date(submitDate + "T12:00:00");
       const basePaymentDate = new Date(submitPaymentDate + "T12:00:00");
 
-      console.log("Mock enviando Comentários para o backend: ", values.notes);
+      const submitMode = decideTransactionSubmitMode({
+        isEditMode,
+        recurring: values.recurring,
+      });
 
-      if (isEditMode && transaction) {
+      if (submitMode === "UPDATE_TRANSACTION" && transaction) {
         await updateTransaction(transaction.id, {
           userId: user.id,
           categoryId: resolvedCategoryId,
@@ -305,6 +430,56 @@ export function CreateTransactionDialog({
           notes: values.notes || undefined,
         });
         toast.success("Transação atualizada!");
+      } else if (submitMode === "CREATE_RECURRENCE") {
+        if (recurrenceModel.frequency === "WEEKLY" && recurrenceModel.byweekday.length === 0) {
+          toast.error("Selecione pelo menos um dia da semana para a recorrência.");
+          return;
+        }
+
+        if (recurrenceModel.frequency === "MONTHLY" && !recurrenceModel.bymonthday) {
+          toast.error("Selecione o dia do mês para a recorrência mensal.");
+          return;
+        }
+
+        if (recurrenceModel.endMode === "UNTIL" && !recurrenceModel.untilDate) {
+          toast.error("Informe a data final da recorrência.");
+          return;
+        }
+
+        if (recurrenceModel.endMode === "COUNT" && !recurrenceModel.count) {
+          toast.error("Informe a quantidade de ocorrências da recorrência.");
+          return;
+        }
+
+        const builtRule = buildRecurrenceRule(recurrenceModel);
+        const validationError = validateRecurrenceRule(builtRule);
+        if (validationError) {
+          toast.error(`RRULE inválida: ${validationError}`);
+          return;
+        }
+
+        const payload: CreateRecurrenceDTO = {
+          ruleRrule: builtRule,
+          templateData: {
+            accountId: values.accountId,
+            categoryId: resolvedCategoryId && resolvedCategoryId > 0 ? resolvedCategoryId : undefined,
+            responsibleId: resolvedRespId && resolvedRespId > 0 ? resolvedRespId : undefined,
+            description: (values.description || "Lançamento recorrente").trim(),
+            amount: Number(values.amount),
+            type: values.type as TransactionType,
+            status: isCreditCard ? "CONFIRMED" : values.status as TransactionStatus,
+            notes: values.notes?.trim() || undefined,
+          },
+          active: true,
+        };
+
+        const createdRecurrence = await createRecurrence(payload);
+        const generatedNow = Boolean((createdRecurrence as { generatedNow?: boolean }).generatedNow);
+        toast.success(
+          generatedNow
+            ? "Recorrência criada e uma transação foi gerada imediatamente."
+            : "Recorrência criada com sucesso!"
+        );
       } else {
         await createTransaction({
           userId: user.id,
@@ -454,7 +629,7 @@ export function CreateTransactionDialog({
                   render={({ field }) => (
                     <FormItem className="min-w-0 flex flex-col">
                       <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Conta</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                      <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ""}>
                         <FormControl>
                           <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
                             <SelectValue placeholder="Selecione..." className="truncate" />
@@ -489,7 +664,7 @@ export function CreateTransactionDialog({
                     <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Categoria</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value?.toString()}
+                      value={String(field.value ?? 0)}
                     >
                       <FormControl>
                         <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
@@ -538,7 +713,7 @@ export function CreateTransactionDialog({
               render={({ field }) => (
                 <FormItem className="min-w-0 flex flex-col">
                   <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                  <Select onValueChange={field.onChange} value={String(field.value ?? 0)}>
                     <FormControl>
                       <SelectTrigger className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium overflow-hidden">
                         <SelectValue placeholder="Selecione..." className="truncate" />
@@ -589,7 +764,22 @@ export function CreateTransactionDialog({
                       {isCreditCard ? "Data da Compra" : "Data"}
                     </FormLabel>
                     <FormControl>
-                      <Input type="date" className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium" {...field} />
+                      <Input
+                        type="date"
+                        className="h-11 rounded-xl bg-zinc-50 border-zinc-200 font-medium"
+                        value={field.value}
+                        onChange={(event) => {
+                          const nextDate = event.target.value;
+                          field.onChange(nextDate);
+                          if (!isEditMode) {
+                            form.setValue("recurrenceStartDate", nextDate, { shouldDirty: true });
+                            const day = Number(nextDate.split("-")[2]);
+                            if (day >= 1 && day <= 31) {
+                              form.setValue("recurrenceBymonthday", day, { shouldDirty: true });
+                            }
+                          }
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -615,8 +805,251 @@ export function CreateTransactionDialog({
               )}
             </div>
 
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="recurring"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-xl border border-zinc-100 bg-white p-4 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                        <Repeat size={14} className="text-emerald-500" />
+                        Recorrente
+                      </FormLabel>
+                      <p className="text-xs text-zinc-500 font-medium">
+                        Ative para transformar este lançamento em uma regra recorrente.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="border-zinc-300 data-[state=unchecked]:bg-zinc-300 data-[state=checked]:bg-emerald-600"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {!isEditMode && isRecurring && (
+              <div className="bg-zinc-50/70 p-4 rounded-2xl border border-zinc-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <CalendarDays size={16} className="text-zinc-500" />
+                  <h3 className="text-sm font-black text-zinc-700">Configuração de recorrência</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="recurrenceFrequency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Frequência</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11 rounded-xl bg-white border-zinc-200 font-medium">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                            <SelectItem value="DAILY">Diária</SelectItem>
+                            <SelectItem value="WEEKLY">Semanal</SelectItem>
+                            <SelectItem value="MONTHLY">Mensal</SelectItem>
+                            <SelectItem value="YEARLY">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="recurrenceInterval"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Intervalo</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            className="h-11 rounded-xl bg-white border-zinc-200 font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="recurrenceStartDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Data de início</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            className="h-11 rounded-xl bg-white border-zinc-200 font-medium"
+                            value={field.value}
+                            onChange={(event) => {
+                              const nextDate = event.target.value;
+                              field.onChange(nextDate);
+                              const day = Number(nextDate.split("-")[2]);
+                              if (day >= 1 && day <= 31) {
+                                form.setValue("recurrenceBymonthday", day, { shouldDirty: true });
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="recurrenceEndMode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Termina em</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11 rounded-xl bg-white border-zinc-200 font-medium">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100">
+                            <SelectItem value="NEVER">Nunca</SelectItem>
+                            <SelectItem value="UNTIL">Em uma data</SelectItem>
+                            <SelectItem value="COUNT">Por quantidade</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {recurrenceEndMode === "UNTIL" && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceUntilDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Data final</FormLabel>
+                        <FormControl>
+                          <Input type="date" className="h-11 rounded-xl bg-white border-zinc-200 font-medium" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recurrenceEndMode === "COUNT" && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Quantidade de ocorrências</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={1} max={999} className="h-11 rounded-xl bg-white border-zinc-200 font-medium" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recurrenceFrequency === "WEEKLY" && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceByweekday"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Dias da semana</FormLabel>
+                        <div className="flex gap-2 flex-wrap">
+                          {WEEKDAY_OPTIONS.map((weekday) => {
+                            const selected = (field.value || []).includes(weekday.id);
+                            return (
+                              <button
+                                key={weekday.id}
+                                type="button"
+                                onClick={() => {
+                                  const current = (field.value || []) as WeekdayId[];
+                                  const next = selected
+                                    ? current.filter((id) => id !== weekday.id)
+                                    : [...current, weekday.id];
+                                  field.onChange(next);
+                                }}
+                                className={`w-10 h-10 rounded-full text-sm font-bold transition-all border-2 flex items-center justify-center ${
+                                  selected
+                                    ? "bg-zinc-900 text-white border-zinc-900"
+                                    : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                                }`}
+                                title={weekday.fullLabel}
+                              >
+                                {weekday.shortLabel}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recurrenceFrequency === "MONTHLY" && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceBymonthday"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400">Dia do mês</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            className="h-11 rounded-xl bg-white border-zinc-200 font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 space-y-2">
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Preview</p>
+                  <p className="text-sm font-semibold text-emerald-800">{recurrenceSummaryText || "Regra inválida"}</p>
+                  {recurrenceRuleExpression && (
+                    <p className="text-[11px] font-mono text-emerald-700 break-all">{recurrenceRuleExpression}</p>
+                  )}
+                  {recurrencePreviewDates.length > 0 && (
+                    <div className="text-xs text-emerald-800 font-medium space-y-1">
+                      {recurrencePreviewDates.map((date, index) => (
+                        <p key={`${date.toISOString()}-${index}`}>
+                          • {format(date, "dd/MM/yyyy")}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Credit Card: Installments */}
-            {isCreditCard && (
+            {isCreditCard && !isRecurring && (
               <FormField
                 control={form.control}
                 name="installmentTotal"
@@ -763,9 +1196,13 @@ export function CreateTransactionDialog({
               className="w-full h-12 rounded-xl font-black text-sm bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg mt-2"
             >
               {loading
-                ? "Salvando..."
+                ? isRecurring && !isEditMode
+                  ? "Salvando recorrência..."
+                  : "Salvando..."
                 : isEditMode
                   ? "Salvar Alterações"
+                  : isRecurring
+                    ? "Salvar Recorrência"
                   : isCreditCard && (form.watch("installmentTotal") ?? 1) > 1
                     ? `Lançar ${form.watch("installmentTotal")} parcelas`
                     : "Salvar Transação"
