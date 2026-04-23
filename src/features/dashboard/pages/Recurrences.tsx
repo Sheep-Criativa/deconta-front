@@ -46,9 +46,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-
-import { AccountType, getAccounts, type Account } from "../services/account.service";
+} from "@/components/ui/table"; import { AccountType, getAccounts, type Account } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import {
@@ -389,14 +387,7 @@ export default function RecurrencesPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-zinc-500 text-sm font-medium mb-1">
-            <Link to="/history" className="inline-flex items-center gap-1 hover:text-zinc-700 transition-colors">
-              <ArrowLeft size={14} />
-              Voltar para transacoes
-            </Link>
-          </div>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
-            <Repeat className="text-emerald-500" size={24} />
             Gestao de Recorrencias
           </h1>
           <p className="text-zinc-400 text-sm font-medium mt-0.5">
@@ -418,92 +409,79 @@ export default function RecurrencesPage() {
           <>
             <Table>
               <TableHeader>
-                <TableRow className="bg-zinc-50/70 hover:bg-zinc-50/70">
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Descricao</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Valor</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Conta</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Tipo</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Status</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Resumo</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black">Ultima Geracao</TableHead>
-                  <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-zinc-500 font-black text-right">Acoes</TableHead>
+                <TableRow className="bg-white hover:bg-white border-b-zinc-200">
+                  <TableHead className="px-6 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Descrição</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Valor</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Conta</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Tipo</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Status</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Resumo</TableHead>
+                  <TableHead className="px-4 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black">Ultima Geração</TableHead>
+                  <TableHead className="px-6 py-4 text-[11px] uppercase tracking-widest text-zinc-500 font-black text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visibleRecurrences.map((recurrence) => {
                   const account = accountById.get(recurrence.templateData.accountId);
                   const type = recurrence.templateData.type || "EXPENSE";
+                  const isExpense = type === "EXPENSE";
 
                   return (
-                    <TableRow key={recurrence.id} className="hover:bg-zinc-50/40">
-                      <TableCell className="px-4 py-3">
-                        <p className="text-sm font-bold text-zinc-900 max-w-[220px] truncate">
-                          {recurrence.templateData.description || "Sem descricao"}
-                        </p>
+                    <TableRow key={recurrence.id} className={`group hover:bg-zinc-50/80 transition-all duration-300 border-b border-zinc-100/80 ${!recurrence.active ? "opacity-60 hover:opacity-100" : ""}`}>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${isExpense ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            {isExpense ? <ArrowDownCircle size={18} /> : <ArrowUpCircle size={18} />}
+                          </div>
+                          <p className="text-sm font-bold text-zinc-900 max-w-[180px] truncate">
+                            {recurrence.templateData.description || "Sem descricao"}
+                          </p>
+                        </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-sm font-black text-zinc-900">
+
+                      <TableCell className="px-4 py-4 text-sm font-semibold tabular-nums whitespace-nowrap text-zinc-500">
                         R$ {Number(recurrence.templateData.amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-zinc-700">
+
+                      <TableCell className="px-4 py-4 text-sm font-medium text-zinc-500">
                         {account?.name || `Conta #${recurrence.templateData.accountId}`}
                       </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className="font-bold">
+
+                      <TableCell className="px-4 py-4">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${isExpense ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                          {isExpense ? <ArrowDownCircle size={10} /> : <ArrowUpCircle size={10} />}
                           {typeLabelMap[type] ?? type}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge
-                          className={recurrence.active
-                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                            : "bg-zinc-100 text-zinc-600 border border-zinc-200"}
-                        >
+
+                      <TableCell className="px-4 py-4">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${recurrence.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-zinc-50 text-zinc-500 border-zinc-200"}`}>
+                          {recurrence.active ? <CheckCircle2 size={10} /> : <Power size={10} />}
                           {recurrence.active ? "Ativa" : "Inativa"}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-xs font-medium text-zinc-600 max-w-[250px] whitespace-normal">
+
+                      <TableCell className="px-4 py-4 text-sm font-medium text-zinc-500 max-w-[250px] whitespace-normal">
                         {recurrenceSummaryById.get(recurrence.id) || "-"}
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-xs font-medium text-zinc-500">
+
+                      <TableCell className="px-4 py-4 text-sm font-medium text-zinc-500 whitespace-nowrap">
                         {recurrence.lastGeneratedDate
                           ? format(parseISO(recurrence.lastGeneratedDate), "dd/MM/yyyy", { locale: ptBR })
                           : "Ainda nao gerou"}
                       </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            onClick={() => openEditDialog(recurrence)}
-                            title="Editar"
-                          >
-                            <Pencil size={14} />
-                          </Button>
 
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            onClick={() => handleToggleActive(recurrence)}
-                            disabled={toggleLoadingId === recurrence.id}
-                            title={recurrence.active ? "Desativar" : "Ativar"}
-                          >
-                            {toggleLoadingId === recurrence.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Power size={14} />
-                            )}
-                          </Button>
-
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            className="text-rose-600 hover:text-rose-700"
-                            onClick={() => handleDeleteRecurrence(recurrence)}
-                            disabled={deleteLoading}
-                            title="Excluir"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:-translate-x-3 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300">
+                          <button onClick={() => openEditDialog(recurrence)} className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors" title="Editar">
+                            <Pencil size={15} />
+                          </button>
+                          <button onClick={() => handleToggleActive(recurrence)} disabled={toggleLoadingId === recurrence.id} className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${recurrence.active ? 'text-zinc-400 hover:text-amber-600 hover:bg-amber-50' : 'text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50'}`} title={recurrence.active ? "Desativar" : "Ativar"}>
+                            {toggleLoadingId === recurrence.id ? <Loader2 size={15} className="animate-spin" /> : <Power size={15} />}
+                          </button>
+                          <button onClick={() => handleDeleteRecurrence(recurrence)} disabled={deleteLoading} className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Excluir">
+                            <Trash2 size={15} />
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -513,9 +491,9 @@ export default function RecurrencesPage() {
             </Table>
 
             {canShowMore && (
-              <div className="p-4 border-t border-zinc-100 flex justify-center">
-                <Button variant="outline" onClick={() => setVisibleCount((count) => count + 12)}>
-                  Carregar mais
+              <div className="p-4 border-t border-zinc-100 flex justify-center bg-zinc-50/30">
+                <Button variant="outline" onClick={() => setVisibleCount((count) => count + 12)} className="rounded-xl font-bold text-zinc-600 bg-white shadow-sm border-zinc-200 hover:bg-zinc-50 px-6">
+                  Carregar mais regras
                 </Button>
               </div>
             )}
@@ -910,11 +888,10 @@ export default function RecurrencesPage() {
                                     };
                                   });
                                 }}
-                                className={`w-10 h-10 rounded-full text-sm font-bold transition-all border-2 flex items-center justify-center ${
-                                  selected
-                                    ? "bg-zinc-900 text-white border-zinc-900"
-                                    : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
-                                }`}
+                                className={`w-10 h-10 rounded-full text-sm font-bold transition-all border-2 flex items-center justify-center ${selected
+                                  ? "bg-zinc-900 text-white border-zinc-900"
+                                  : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                                  }`}
                                 title={weekday.fullLabel}
                               >
                                 {weekday.shortLabel}
