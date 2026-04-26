@@ -8,17 +8,19 @@ import {
   Wallet, TrendingUp, CreditCard,
   ArrowUpRight, ArrowDownRight, Loader2, List, Tag, ArrowUpCircle, ArrowDownCircle, ChevronRight, ChevronLeft
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, parseISO, subMonths, isToday, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, addMonths } from "date-fns";
+import { format, startOfDay, startOfMonth, endOfMonth, parseISO, subMonths, isToday, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccounts, type Account, AccountType } from "../services/account.service";
 import { getTransactions, type Transaction, type TransactionType } from "../services/transaction.service";
+import { getRecurrences, type Recurrence } from "../services/recurrence.service";
 import { getStatements, type Statement } from "../services/credit-card.service";
 import { BaseCard } from "../components/BaseCard";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { buildBalanceMap, computeTotalBalance, computeTotalSimulatedBalance } from "../utils/balanceUtils";
+import { buildProjectedTransactions } from "../utils/projectedTransactions";
 import { OnboardingTour } from "../components/OnboardingTour";
 
 // ─── Chart: Income vs Expense bar chart (last 6 months) ──────────────────────
@@ -267,12 +269,22 @@ const renderDonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent 
 };
 
 // ─── Dashboard Calendar Preview  ─────────────────────────────────────────────
-function DashboardCalendar({ transactions, className }: { transactions: Transaction[]; className?: string }) {
+function DashboardCalendar({
+  transactions,
+  recurrences,
+  className,
+}: {
+  transactions: Transaction[];
+  recurrences: Recurrence[];
+  className?: string;
+}) {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
+  const monthStartKey = format(monthStart, "yyyy-MM-dd");
+  const monthEndKey = format(monthEnd, "yyyy-MM-dd");
   
   // Calendário sempre começa na segunda-feira
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -281,11 +293,55 @@ function DashboardCalendar({ transactions, className }: { transactions: Transact
   // Realocar o weekDays para bater config de weekStartsOn: 1 se for o caso
   const adjustedWeekDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
+  const todayStart = useMemo(() => startOfDay(new Date()), []);
+  const projectionStart = useMemo(
+    () => (startDate > todayStart ? startDate : todayStart),
+    [startDate, todayStart],
+  );
+
+  const projectedTransactions = useMemo(
+    () =>
+      buildProjectedTransactions({
+        recurrences,
+        existingTransactions: transactions,
+        rangeStart: projectionStart,
+        rangeEnd: endDate,
+      }),
+    [recurrences, transactions, projectionStart, endDate],
+  );
+
+  const calendarTransactions = useMemo(
+    () => [...transactions, ...projectedTransactions],
+    [transactions, projectedTransactions],
+  );
+
+  const monthTransactions = useMemo(
+    () =>
+      calendarTransactions.filter((tx) => {
+        const txDayKey = tx.date.slice(0, 10);
+        return txDayKey >= monthStartKey && txDayKey <= monthEndKey;
+      }),
+    [calendarTransactions, monthStartKey, monthEndKey],
+  );
+
+  const monthIncomeForecast = monthTransactions
+    .filter((tx) => tx.type.trim() === "INCOME")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+  const monthExpenseForecast = monthTransactions
+    .filter((tx) => tx.type.trim() === "EXPENSE")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+  const monthNetForecast = monthIncomeForecast - monthExpenseForecast;
+
   return (
     <BaseCard className={`rounded-3xl shadow-none overflow-hidden bg-white border border-zinc-100 p-6 flex flex-col h-full ${className || ''}`}>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h3 className="text-sm font-bold text-zinc-800 tracking-wide">Calendário Financeiro</h3>
+          <p className={`text-[10px] font-black mt-1 ${monthNetForecast >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            Saldo previsto: R$ {monthNetForecast.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </p>
         </div>
         <div className="flex items-center gap-4">
            <div className="flex items-center gap-1.5 bg-black/80 border border-white/5 rounded-xl px-1.5 py-1">
@@ -319,7 +375,8 @@ function DashboardCalendar({ transactions, className }: { transactions: Transact
           <div className="grid grid-cols-7 border-t border-l border-zinc-100 bg-white rounded-xl overflow-hidden flex-1">
             {days.map(day => {
               const isCur = isSameMonth(day, monthStart);
-              const dayTxs = transactions.filter(t => isSameDay(parseISO(t.date), day));
+              const dayKey = format(day, "yyyy-MM-dd");
+              const dayTxs = calendarTransactions.filter((t) => t.date.slice(0, 10) === dayKey);
               const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s,t) => s + Number(t.amount), 0);
               const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s,t) => s + Number(t.amount), 0);
 
@@ -347,6 +404,7 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [accounts,     setAccounts]     = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurrences,  setRecurrences]  = useState<Recurrence[]>([]);
   const [statements,   setStatements]   = useState<Statement[]>([]);
   const [categories,   setCategories]   = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -358,14 +416,16 @@ export default function DashboardHome() {
     if (!user) return;
     const { getCategories } = await import("../services/category.service");
     try {
-      const [accs, txs, cats] = await Promise.all([
+      const [accs, txs, cats, recs] = await Promise.all([
         getAccounts(user.id),
         getTransactions(user.id),
         getCategories(user.id),
+        getRecurrences(user.id),
       ]);
       setAccounts(accs.filter(a => a.isActive));
       setTransactions(txs);
       setCategories(cats);
+      setRecurrences(recs.filter((recurrence) => recurrence.active));
 
       // Fetch statements for all credit cards
       const ccAccounts = accs.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
@@ -600,7 +660,7 @@ export default function DashboardHome() {
 
           {/* --- ROW 2 --- */}
           {/* Dashboard Calendar Preview */}
-          <DashboardCalendar transactions={transactions} className="lg:col-span-8" />
+          <DashboardCalendar transactions={transactions} recurrences={recurrences} className="lg:col-span-8" />
 
           {/* Recent Transactions */}
           <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
