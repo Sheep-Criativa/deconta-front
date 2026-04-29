@@ -469,7 +469,7 @@ export default function RecurrencesPage() {
                       </TableCell>
 
                       <TableCell className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:-translate-x-3 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300">
+                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-40 md:-translate-x-3 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300">
                           <button onClick={() => openEditDialog(recurrence)} className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors" title="Editar">
                             <Pencil size={15} />
                           </button>

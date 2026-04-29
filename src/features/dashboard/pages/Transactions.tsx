@@ -166,7 +166,7 @@ function TransactionRow({
       {/* Actions menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
+          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all flex-shrink-0">
             <MoreVertical size={15} />
           </button>
         </DropdownMenuTrigger>
