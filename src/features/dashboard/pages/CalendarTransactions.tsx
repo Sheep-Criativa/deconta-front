@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, addMonths, subMonths, parseISO, isSameDay } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { format, startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, addMonths, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTransactions, updateTransaction, type Transaction } from "../services/transaction.service";
+import { getRecurrences, type Recurrence } from "../services/recurrence.service";
 import { getAccounts, type Account } from "../services/account.service";
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
@@ -11,6 +12,7 @@ import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { ViewTransactionDialog } from "../components/ViewTransactionDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { buildProjectedTransactions, type ProjectedTransaction } from "../utils/projectedTransactions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,20 +34,23 @@ export default function CalendarTransactions() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
+  const [recurrences, setRecurrences] = useState<Recurrence[]>([]);
 
   const loadAll = async () => {
     if (!user) return;
     try {
-      const [txs, accs, cats, resps] = await Promise.all([
+      const [txs, accs, cats, resps, recs] = await Promise.all([
         getTransactions(user.id),
         getAccounts(user.id),
         getCategories(user.id),
-        getResponsibles(user.id)
+        getResponsibles(user.id),
+        getRecurrences(user.id),
       ]);
       setTransactions(txs);
       setAccounts(accs);
       setCategories(cats);
       setResponsibles(resps);
+      setRecurrences(recs.filter((recurrence) => recurrence.active));
     } catch (e) {
       console.error(e);
       toast.error("Erro ao carregar transações.");
@@ -64,10 +69,52 @@ export default function CalendarTransactions() {
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const dateFormat = "d";
+  const monthStartKey = format(monthStart, "yyyy-MM-dd");
+  const monthEndKey = format(monthEnd, "yyyy-MM-dd");
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
   const weekDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+  const projectionStart = useMemo(() => {
+    const todayStart = startOfDay(new Date());
+    return startDate > todayStart ? startDate : todayStart;
+  }, [startDate]);
+
+  const projectedTransactions = useMemo(
+    () =>
+      buildProjectedTransactions({
+        recurrences,
+        existingTransactions: transactions,
+        rangeStart: projectionStart,
+        rangeEnd: endDate,
+      }),
+    [recurrences, transactions, projectionStart, endDate],
+  );
+
+  const calendarTransactions = useMemo(
+    () => [...transactions, ...projectedTransactions] as Array<Transaction | ProjectedTransaction>,
+    [transactions, projectedTransactions],
+  );
+
+  const monthTransactions = useMemo(
+    () =>
+      calendarTransactions.filter((tx) => {
+        const txDayKey = tx.date.slice(0, 10);
+        return txDayKey >= monthStartKey && txDayKey <= monthEndKey;
+      }),
+    [calendarTransactions, monthStartKey, monthEndKey],
+  );
+
+  const monthIncomeForecast = monthTransactions
+    .filter((tx) => tx.type.trim() === "INCOME")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+  const monthExpenseForecast = monthTransactions
+    .filter((tx) => tx.type.trim() === "EXPENSE")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+  const monthNetForecast = monthIncomeForecast - monthExpenseForecast;
 
   // Função para antecipar transação futura
   const handleMarkAsPaidToday = async (tx: Transaction, e: React.MouseEvent) => {
@@ -100,9 +147,10 @@ export default function CalendarTransactions() {
     return days.map((day) => {
       // Filtrar as txs desse dia baseadas no campo `date` ou `paymentDate`.
       // Vamos basear na Data de Vencimento (`date`) para exibir no calendário onde a pessoa previu a conta.
-      const dayTxs = transactions.filter(tx => isSameDay(parseISO(tx.date), day));
-      const incomeTxs = dayTxs.filter(t => t.type === "INCOME");
-      const expenseTxs = dayTxs.filter(t => t.type === "EXPENSE");
+      const dayKey = format(day, "yyyy-MM-dd");
+      const dayTxs = calendarTransactions.filter((tx) => tx.date.slice(0, 10) === dayKey);
+      const incomeTxs = dayTxs.filter((t) => t.type.trim() === "INCOME");
+      const expenseTxs = dayTxs.filter((t) => t.type.trim() === "EXPENSE");
       const isCurrentMonth = isSameMonth(day, monthStart);
 
       return (
@@ -125,25 +173,40 @@ export default function CalendarTransactions() {
           
           <div className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-1 max-h-[80px]">
              {dayTxs.map(tx => {
-               const isExpense = tx.type === "EXPENSE";
+               const isProjected = (tx as ProjectedTransaction).isProjected === true;
+               const isExpense = tx.type.trim() === "EXPENSE";
                const isFuture = parseISO(tx.date) > new Date() && tx.status === "PENDING";
                
                return (
                  <div
                    key={tx.id}
-                   onClick={(e) => { e.stopPropagation(); setViewTx(tx); }}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     if (isProjected) {
+                       toast.info("Lançamento previsto por recorrência. Edite em Recorrências.");
+                       return;
+                     }
+                     setViewTx(tx as Transaction);
+                   }}
                    className={`text-[10px] sm:text-xs font-semibold px-2 py-1 rounded w-full truncate border
-                    ${isExpense ? "bg-rose-50 border-rose-100 text-rose-700" : "bg-emerald-50 border-emerald-100 text-emerald-700"}
+                    ${isProjected
+                      ? isExpense
+                        ? "bg-rose-50/90 border-rose-200 border-dashed text-rose-700"
+                        : "bg-emerald-50/90 border-emerald-200 border-dashed text-emerald-700"
+                      : isExpense
+                        ? "bg-rose-50 border-rose-100 text-rose-700"
+                        : "bg-emerald-50 border-emerald-100 text-emerald-700"}
                     hover:brightness-95 transition-all flex justify-between items-center group/item
                    `}
                    title={tx.description || (isExpense ? "Despesa" : "Receita")}
                  >
                    <span className="truncate flex-1">
+                     {isProjected ? "(Prev.) " : ""}
                      {tx.description || (isExpense ? "Despesa" : "Receita")}
                    </span>
                    
                    {/* Menu de ações específicas no calendário */}
-                   {isFuture && isExpense && (
+                   {isFuture && isExpense && !isProjected && (
                      <DropdownMenu>
                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                          <button className="opacity-0 group-hover/item:opacity-100 hover:text-zinc-900 transition-opacity ml-1 z-10 p-0.5 rounded">
@@ -196,6 +259,9 @@ export default function CalendarTransactions() {
           </h1>
           <p className="text-zinc-400 text-sm font-medium mt-0.5">
             Visão mensal de receitas e despesas
+          </p>
+          <p className={`text-xs font-black mt-1 ${monthNetForecast >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            Saldo previsto do mês: R$ {monthNetForecast.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </p>
         </div>
 

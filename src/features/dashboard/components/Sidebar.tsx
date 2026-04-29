@@ -12,6 +12,7 @@ import {
   ChevronDown,
   CalendarDays,
   List,
+  Repeat,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -30,7 +31,8 @@ const navItems = [
     id: "tour-sidebar-history",
     subs: [
       { path: "/history", label: "Geral", icon: List },
-      { path: "/history/calendar", label: "Calendário", icon: CalendarDays }
+      { path: "/history/calendar", label: "Calendário", icon: CalendarDays },
+      { path: "/history/recurrences", label: "Recorrências", icon: Repeat }
     ]
   },
   { icon: FileText,        path: "/reports",      label: "Relatórios",   id: "tour-sidebar-reports" },

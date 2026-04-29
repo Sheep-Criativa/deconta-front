@@ -21,13 +21,12 @@ import { getAccounts, type Account, AccountType } from "../services/account.serv
 import { getCategories, type Category } from "../services/category.service";
 import { getResponsibles, type Responsible } from "../services/responsible.service";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
-import { CreateRecurrenceDialog } from "../components/CreateRecurrenceDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isToday, isYesterday, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, ChevronDown, Repeat } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -382,7 +381,6 @@ export default function Transactions() {
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false);
   const [editingTx,    setEditingTx]    = useState<Transaction | null>(null);
   const [deletingTx,   setDeletingTx]   = useState<Transaction | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -440,10 +438,10 @@ export default function Transactions() {
   const grouped = useMemo(() => groupTransactionsByDate(filtered), [filtered]);
 
   async function handleDelete() {
-    if (!deletingTx) return;
+    if (!deletingTx || !user) return;
     setDeleteLoading(true);
     try {
-      await deleteTransaction(deletingTx.id);
+      await deleteTransaction(deletingTx.id, user.id);
       setTransactions(prev => prev.filter(t => t.id !== deletingTx.id));
       toast.success("Transação excluída!");
       setDeletingTx(null);
@@ -545,30 +543,12 @@ export default function Transactions() {
             </button>
           </div>
 
-          <div className="flex bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/20 overflow-hidden">
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="bg-transparent hover:bg-emerald-700 text-white h-12 px-5 font-bold transition-all border-none rounded-none active:scale-95"
-            >
-              <Plus className="mr-2 h-5 w-5" /> Nova Transação
-            </Button>
-            <div className="w-[1px] bg-emerald-500/50 my-2" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-transparent hover:bg-emerald-700 text-white h-12 px-3 font-bold transition-all border-none rounded-none active:scale-95">
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white rounded-2xl shadow-xl border border-zinc-100 py-2 w-48">
-                <DropdownMenuItem
-                  onClick={() => setIsRecurrenceOpen(true)}
-                  className="px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50 cursor-pointer flex items-center gap-2"
-                >
-                  <Repeat className="text-zinc-400 h-4 w-4" /> Nova Recorrência
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-5 font-bold transition-all rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95"
+          >
+            <Plus className="mr-2 h-5 w-5" /> Nova Transação
+          </Button>
         </div>
       </div>
 
@@ -689,13 +669,6 @@ export default function Transactions() {
         onOpenChange={(open) => { if (!open) setEditingTx(null); }}
         onSuccess={() => { setEditingTx(null); loadAll(); }}
         transaction={editingTx ?? undefined}
-      />
-
-      {/* Recurrence dialog */}
-      <CreateRecurrenceDialog
-        open={isRecurrenceOpen}
-        onOpenChange={setIsRecurrenceOpen}
-        onSuccess={loadAll}
       />
     </div>
   );

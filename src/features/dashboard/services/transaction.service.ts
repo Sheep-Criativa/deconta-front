@@ -62,16 +62,26 @@ export async function getTransactions(userId: number): Promise<Transaction[]> {
   return response.data;
 }
 
-export async function createTransaction(data: CreateTransactionDTO): Promise<Transaction | Transaction[]> {
+export async function createTransaction(
+  data: CreateTransactionDTO,
+): Promise<Transaction | Transaction[]> {
   const response = await api.post("/transactions", data);
   return response.data;
 }
 
-export async function updateTransaction(id: number, data: UpdateTransactionDTO): Promise<Transaction> {
+export async function updateTransaction(
+  id: number,
+  data: UpdateTransactionDTO,
+): Promise<Transaction> {
   const response = await api.put(`/transactions/${id}`, data);
   return response.data;
 }
 
-export async function deleteTransaction(id: number): Promise<void> {
-  await api.delete(`/transactions/${id}`);
+export async function deleteTransaction(
+  id: number,
+  userId: number,
+): Promise<void> {
+  await api.delete(`/transactions/${id}`, {
+    data: { userId },
+  });
 }
