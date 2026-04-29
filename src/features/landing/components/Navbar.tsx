@@ -30,7 +30,6 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-600">
           <a href="#inicio" className="hover:text-zinc-900 transition-colors">Início</a>
           <a href="#recursos" className="hover:text-zinc-900 transition-colors">Recursos</a>
-          <a href="#planos" className="hover:text-zinc-900 transition-colors">Planos</a>
         </nav>
 
         <div className="flex items-center gap-4">
