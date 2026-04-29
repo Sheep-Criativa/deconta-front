@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -68,11 +69,13 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         <div 
           className="absolute top-8 left-8 z-10"
         >
-          <img
-            src="/images/logoverticalbranco.png"
-            alt="DeConta Logo"
-            className="w-1/5 h-auto block object-contain leading-none -mt-14 -ml-4"
-          />
+          <Link to="/">
+            <img
+              src="/images/logoverticalbranco.png"
+              alt="DeConta Logo"
+              className="w-1/5 h-auto block object-contain leading-none -mt-14 -ml-4 hover:scale-105 transition-transform duration-300 cursor-pointer"
+            />
+          </Link>
         </div>
 
         {/* KEYCHAIN IMAGE - Parallax Rápido (Mais próximo) */}
