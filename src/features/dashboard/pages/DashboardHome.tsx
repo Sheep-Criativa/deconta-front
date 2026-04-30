@@ -744,7 +744,7 @@ export default function DashboardHome() {
                     </button>
                   ))}
                 </div>
-                <a href="/account" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
+                <a href={accountTab === "contas" ? "/account" : "/cards"} className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">Gerenciar →</a>
               </div>
             </div>
 
