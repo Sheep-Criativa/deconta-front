@@ -45,7 +45,7 @@ export function CreateTransferDialog({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       destinationAccountId: "",
-      amount: 0,
+      amount: "" as any,
       date: new Date().toISOString().split("T")[0],
     },
   });

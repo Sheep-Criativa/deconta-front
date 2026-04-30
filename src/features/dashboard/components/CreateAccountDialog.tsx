@@ -69,11 +69,11 @@ export function CreateAccountDialog({
     defaultValues: {
       name:           "",
       type:           defaultType ?? AccountType.CHECKING,
-      initialBalance: 0,
+      initialBalance: "" as any,
       currencyCode:   "BRL",
       closingDay:     "",
       dueDay:         "",
-      limitAmount:    0,
+      limitAmount: "" as any,
     },
   });
 
@@ -95,11 +95,11 @@ export function CreateAccountDialog({
       form.reset({
         name:           "",
         type:           defaultType ?? AccountType.CHECKING,
-        initialBalance: 0,
+        initialBalance: "" as any,
         currencyCode:   "BRL",
         closingDay:     "",
         dueDay:         "",
-        limitAmount:    0,
+        limitAmount: "" as any,
       });
     }
   }, [open, editingAccount, defaultType]);

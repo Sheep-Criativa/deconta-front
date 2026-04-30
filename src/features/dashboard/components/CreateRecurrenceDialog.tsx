@@ -101,7 +101,7 @@ export function CreateRecurrenceDialog({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       type: defaultType,
-      amount: 0,
+      amount: "" as any,
       description: "",
       frequency: "MONTHLY",
       bymonthday: new Date().getDate(),
@@ -130,7 +130,7 @@ export function CreateRecurrenceDialog({
     if (open) {
       form.reset({
         type: defaultType,
-        amount: 0,
+        amount: "" as any,
         description: "",
         frequency: "MONTHLY",
         bymonthday: new Date().getDate(),
