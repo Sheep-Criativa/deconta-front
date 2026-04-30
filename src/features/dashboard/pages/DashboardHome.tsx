@@ -492,7 +492,7 @@ export default function DashboardHome() {
 
   const monthlyFlow   = useMemo(() => buildMonthlyFlow(transactions), [transactions]);
   const categoryData  = useMemo(() => buildCategoryData(transactions, categories), [transactions, categories]);
-  const recentTxs     = useMemo(() => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7), [transactions]);
+  const recentTxs     = useMemo(() => [...transactions].sort((a, b) => b.id - a.id).slice(0, 7), [transactions]);
   const openStatements = statements.filter(s => s.status.trim() === "OPEN" || s.status.trim() === "CLOSED");
 
   const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
