@@ -805,7 +805,7 @@ export function CreateTransactionDialog({
               )}
             </div>
 
-            {!isEditMode && (
+            {!isEditMode && !isCreditCard && (
               <FormField
                 control={form.control}
                 name="recurring"
@@ -832,7 +832,7 @@ export function CreateTransactionDialog({
               />
             )}
 
-            {!isEditMode && isRecurring && (
+            {!isEditMode && !isCreditCard && isRecurring && (
               <div className="bg-zinc-50/70 p-4 rounded-2xl border border-zinc-100 space-y-4">
                 <div className="flex items-center gap-2">
                   <CalendarDays size={16} className="text-zinc-500" />
