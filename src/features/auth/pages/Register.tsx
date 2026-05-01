@@ -67,7 +67,7 @@ export default function Register() {
 
     const formData = new FormData(event.currentTarget);
     const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
+    const email = (formData.get("email") as string).toLowerCase();
     const passwordHash = formData.get("passwordHash") as string;
 
     const parseResult = registerSchema.safeParse({ name, email, passwordHash });
