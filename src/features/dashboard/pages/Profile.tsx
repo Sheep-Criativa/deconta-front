@@ -27,7 +27,13 @@ type ProfileValues = z.infer<typeof profileSchema>;
 // ── Password form schema ─────────────────────────────────────────────────────
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Informe a senha atual"),
-  newPassword:     z.string().min(6, "A nova senha deve ter ao menos 6 caracteres"),
+  newPassword:     z.string()
+    .min(6, "A nova senha deve ter ao menos 6 caracteres")
+    .max(100)
+    .regex(/[A-Z]/, "Senha deve conter ao menos uma letra maiúscula")
+    .regex(/[a-z]/, "Senha deve conter ao menos uma letra minúscula")
+    .regex(/[0-9]/, "Senha deve conter ao menos um número")
+    .regex(/[^A-Za-z0-9]/, "Senha deve conter ao menos um caractere especial"),
   confirmPassword: z.string(),
 }).refine(d => d.newPassword === d.confirmPassword, {
   message: "As senhas não coincidem",
