@@ -189,7 +189,7 @@ function RecentTxRow({
         <p className="text-sm font-semibold text-zinc-800 truncate">
           {tx.description || cat?.name || (isExpense ? "Despesa" : "Receita")}
         </p>
-        <p className="text-[10px] text-zinc-400 font-medium">{acc?.name} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>
+        <p className="text-[10px] text-zinc-400 font-medium">{acc ? acc.name : <span className="text-rose-500 font-bold">Sem conta</span>} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>
       </div>
       <span className={`text-sm font-semibold flex-shrink-0 ${isExpense ? "text-zinc-800" : "text-emerald-600"}`}>
         {isExpense ? "-" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}

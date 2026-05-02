@@ -121,12 +121,17 @@ function TransactionRow({
           )}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {account && (
+          {account ? (
             <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
               {isCreditCard
                 ? <CreditCard size={10} className="text-zinc-300" />
                 : <Landmark size={10} className="text-zinc-300" />}
               {account.name}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded-md">
+              <Landmark size={10} />
+              Sem conta vinculada
             </span>
           )}
           {resp && (
@@ -180,6 +185,11 @@ function TransactionRow({
           {(isExpense && tx.status.trim() === "PENDING" && new Date(tx.date) > new Date()) && (
             <DropdownMenuItem
               onClick={async () => {
+                if (!tx.accountId || tx.accountId === 0) {
+                  toast.error("Para pagar, defina a conta vinculada.");
+                  onEdit(tx);
+                  return;
+                }
                 const newDesc = tx.description ? `${tx.description} - (Antecipado)` : "Pagamento (Antecipado)";
                 try {
                   const { updateTransaction } = await import("../services/transaction.service");

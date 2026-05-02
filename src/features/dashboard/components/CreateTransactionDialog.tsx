@@ -58,11 +58,11 @@ import {
 import { decideTransactionSubmitMode } from "../utils/transactionSubmitDecision";
 import { toast } from "sonner";
 
-const formSchema = z.object({
+const baseSchema = z.object({
   accountId: z.preprocess((val) => {
     const num = Number(val);
     return isNaN(num) ? 0 : num;
-  }, z.number().min(1, "Selecione uma conta")),
+  }, z.number().min(0)),
   categoryId: z.coerce.number().min(0).optional(), // 0 = Sem categoria
   responsibleId: z.coerce.number().min(0).optional(), // 0 = Sem responsável
   description: z.string().max(250).optional(),
@@ -83,6 +83,16 @@ const formSchema = z.object({
   recurrenceCount: z.coerce.number().int().min(1).max(999).optional(),
   recurrenceByweekday: z.array(z.string()).default([]),
   recurrenceBymonthday: z.coerce.number().int().min(1).max(31).optional(),
+});
+
+const formSchema = baseSchema.superRefine((data, ctx) => {
+  if (data.status !== "PENDING" && data.accountId === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Selecione uma conta",
+      path: ["accountId"],
+    });
+  }
 });
 
 interface CreateTransactionDialogProps {
@@ -419,6 +429,7 @@ export function CreateTransactionDialog({
       if (submitMode === "UPDATE_TRANSACTION" && transaction) {
         await updateTransaction(transaction.id, {
           userId: user.id,
+          accountId: values.accountId === 0 ? null : values.accountId,
           categoryId: resolvedCategoryId,
           responsibleId: resolvedRespId,
           description: values.description || undefined,
@@ -461,7 +472,7 @@ export function CreateTransactionDialog({
         const payload: CreateRecurrenceDTO = {
           ruleRrule: builtRule,
           templateData: {
-            accountId: values.accountId,
+            accountId: values.accountId === 0 ? null : values.accountId,
             categoryId: resolvedCategoryId && resolvedCategoryId > 0 ? resolvedCategoryId : undefined,
             responsibleId: resolvedRespId && resolvedRespId > 0 ? resolvedRespId : undefined,
             description: (values.description || "Lançamento recorrente").trim(),
@@ -483,7 +494,7 @@ export function CreateTransactionDialog({
       } else {
         await createTransaction({
           userId: user.id,
-          accountId: values.accountId,
+          accountId: values.accountId === 0 ? null : values.accountId,
           categoryId: resolvedCategoryId!,
           responsibleId: resolvedRespId!,
           description: values.description || undefined,
@@ -636,6 +647,13 @@ export function CreateTransactionDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
+                          {/* Sem conta option */}
+                          <SelectItem value="0" className="font-medium text-zinc-400 min-w-0">
+                            <span className="flex items-center gap-2 truncate pr-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block shrink-0" />
+                              <span className="truncate">Sem conta vinculada</span>
+                            </span>
+                          </SelectItem>
                           {accounts.map(acc => (
                             <SelectItem key={acc.id} value={String(acc.id)} className="font-medium min-w-0">
                               <span className="flex items-center gap-2 truncate pr-2">
