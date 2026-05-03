@@ -123,22 +123,20 @@ export function CreateAccountDialog({
 
     try {
       if (isEditing && editingAccount) {
-        // ── EDIT MODE: only send fields that can be safely edited ──
+        // ── EDIT MODE: backend expects the full account payload ──
         const payload: any = {
-          userId:         user.id,
-          name:           values.name,
-          type:           values.type,
-          currencyCode:   values.currencyCode,
-          isActive:       editingAccount.isActive,
+          userId: Number(user.id),
+          name: String(values.name),
+          type: values.type,
+          currencyCode: String(values.currencyCode).trim(),
+          isActive: editingAccount.isActive,
           initialBalance: Number(editingAccount.initialBalance),
-          currentBalance: Number(editingAccount.currentBalance), // backend requirement
+          currentBalance: Number(editingAccount.currentBalance),
+          closingDay: values.closingDay ? String(values.closingDay) : null,
+          dueDay: values.dueDay ? String(values.dueDay) : null,
+          limitAmount:
+            values.limitAmount == null ? null : Number(values.limitAmount),
         };
-
-        if (values.type === AccountType.CREDIT_CARD) {
-          payload.closingDay  = values.closingDay ? values.closingDay.toString() : null;
-          payload.limitAmount = values.limitAmount ?? null;
-          payload.dueDay      = values.dueDay ? values.dueDay.toString() : null;
-        }
 
         await updateAccount(editingAccount.id, payload);
         toast.success("Conta atualizada!");

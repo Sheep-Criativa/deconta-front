@@ -47,7 +47,6 @@ import {
   buildRecurrenceRule,
   getRecurrencePreviewDates,
   recurrenceRuleSummary,
-  toRRuleExpression,
   type RecurrenceEndMode,
   type RecurrenceFrequency,
   type RecurrenceRuleFormModel,
@@ -207,15 +206,6 @@ export function CreateTransactionDialog({
     }
   }, [isRecurring, isEditMode, recurrenceModel]);
 
-  const recurrenceRuleExpression = useMemo(() => {
-    if (!recurrenceRule) return "";
-    try {
-      return toRRuleExpression(recurrenceRule);
-    } catch {
-      return "";
-    }
-  }, [recurrenceRule]);
-
   const recurrencePreviewDates = useMemo(() => {
     if (!recurrenceRule) return [];
     return getRecurrencePreviewDates(recurrenceRule, 4);
@@ -284,7 +274,7 @@ export function CreateTransactionDialog({
     if (open) {
       if (transaction) {
         form.reset({
-          accountId: transaction.accountId,
+          accountId: transaction.accountId ?? 0,
           categoryId: transaction.categoryId ?? 0,
           responsibleId: transaction.responsibleId ?? 0,
           type: transaction.type.trim() as TransactionType,
@@ -430,7 +420,7 @@ export function CreateTransactionDialog({
       if (submitMode === "UPDATE_TRANSACTION" && transaction) {
         await updateTransaction(transaction.id, {
           userId: user.id,
-          accountId: values.accountId === 0 ? null : values.accountId,
+          accountId: values.accountId,
           categoryId: resolvedCategoryId,
           responsibleId: resolvedRespId,
           description: values.description || undefined,
@@ -473,7 +463,7 @@ export function CreateTransactionDialog({
         const payload: CreateRecurrenceDTO = {
           ruleRrule: builtRule,
           templateData: {
-            accountId: values.accountId === 0 ? null : values.accountId,
+            accountId: values.accountId,
             categoryId: resolvedCategoryId && resolvedCategoryId > 0 ? resolvedCategoryId : undefined,
             responsibleId: resolvedRespId && resolvedRespId > 0 ? resolvedRespId : undefined,
             description: (values.description || "Lançamento recorrente").trim(),
