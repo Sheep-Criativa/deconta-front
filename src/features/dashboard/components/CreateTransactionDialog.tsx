@@ -361,12 +361,13 @@ export function CreateTransactionDialog({
             resolvedCategoryId = createdCat.id;
             setCategories(prev => [...prev, createdCat]);
           } catch (createErr) {
-            // Se o backend retornar erro pois já existe (causando até crash de headers sent)
-            // refazemos o fetch das categorias para ver se o registro apareceu.
+            // Se o backend bloquear o nome duplicado, reaproveitamos a Geral já existente.
             const { getCategories } = await import("../services/category.service");
             const freshCats = await getCategories(user.id);
             setCategories(freshCats);
-            const foundCat = freshCats.find(c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType);
+            const foundCat = freshCats.find(
+              c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType
+            );
             if (foundCat) {
               resolvedCategoryId = foundCat.id;
             } else {

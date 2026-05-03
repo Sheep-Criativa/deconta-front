@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { CreateRecurrenceDialog } from "../components/CreateRecurrenceDialog";
 import {
   Select,
   SelectContent,
@@ -137,6 +138,7 @@ export default function RecurrencesPage() {
   const [visibleCount, setVisibleCount] = useState(12);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<EditRecurrenceState | null>(null);
 
   async function loadAll() {
@@ -391,6 +393,12 @@ export default function RecurrencesPage() {
             {recurrences.length} regra{recurrences.length !== 1 ? "s" : ""} cadastrada{recurrences.length !== 1 ? "s" : ""}
           </p>
         </div>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-lg"
+        >
+          + Nova Recorrencia
+        </Button>
       </div>
 
       <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm overflow-hidden">
@@ -957,6 +965,14 @@ export default function RecurrencesPage() {
         </DialogContent>
       </Dialog>
 
+      <CreateRecurrenceDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSuccess={() => {
+          loadAll();
+          setIsCreateOpen(false);
+        }}
+      />
     </div>
   );
 }
