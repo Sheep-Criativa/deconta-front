@@ -186,7 +186,7 @@ function RecentTxRow({
         })()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-zinc-800 truncate">
+        <p className="text-[13px] sm:text-sm font-semibold text-zinc-800 line-clamp-2 sm:line-clamp-1 leading-snug">
           {tx.description || cat?.name || (isExpense ? "Despesa" : "Receita")}
         </p>
         <p className="text-[10px] text-zinc-400 font-medium">{acc ? acc.name : <span className="text-rose-500 font-bold">Sem conta</span>} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>

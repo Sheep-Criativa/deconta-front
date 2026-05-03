@@ -112,7 +112,7 @@ function TransactionRow({
 
       {/* Description + account + resp */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-zinc-900 truncate">
+        <p className="text-[13px] sm:text-sm font-bold text-zinc-900 line-clamp-2 sm:line-clamp-1 leading-snug">
           {tx.description || category?.name || cfg.label}
           {tx.installmentTotal && tx.installmentTotal > 1 && (
             <span className="ml-2 text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
@@ -608,7 +608,7 @@ export default function Transactions() {
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-black text-rose-700">Excluir transação?</p>
-            <p className="text-xs text-rose-500 font-medium mt-0.5">
+            <p className="text-[11px] sm:text-xs text-rose-500 font-medium mt-0.5 line-clamp-2 sm:line-clamp-1 leading-snug">
               {deletingTx.description || "Sem descrição"} · R$ {Number(deletingTx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </div>
