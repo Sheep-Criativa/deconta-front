@@ -1050,9 +1050,7 @@ export function CreateTransactionDialog({
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 space-y-2">
                   <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Preview</p>
                   <p className="text-sm font-semibold text-emerald-800">{recurrenceSummaryText || "Regra inválida"}</p>
-                  {recurrenceRuleExpression && (
-                    <p className="text-[11px] font-mono text-emerald-700 break-all">{recurrenceRuleExpression}</p>
-                  )}
+                  
                   {recurrencePreviewDates.length > 0 && (
                     <div className="text-xs text-emerald-800 font-medium space-y-1">
                       {recurrencePreviewDates.map((date, index) => (

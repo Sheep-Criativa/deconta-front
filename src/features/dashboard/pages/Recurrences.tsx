@@ -716,13 +716,7 @@ export default function RecurrencesPage() {
                     <CalendarDays size={14} className="text-zinc-500" />
                     Regra de repeticao
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setEditing((prev) => prev ? { ...prev, advancedMode: !prev.advancedMode } : prev)}
-                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
-                  >
-                    {editing.advancedMode ? "Voltar para modo guiado" : "Editar RRULE avancada"}
-                  </button>
+                  
                 </div>
 
                 {editing.advancedMode ? (
@@ -926,9 +920,7 @@ export default function RecurrencesPage() {
                   <p className="text-sm font-semibold text-emerald-800">
                     {editRulePreview.summary || "Sem resumo"}
                   </p>
-                  {editRulePreview.expression && (
-                    <p className="text-[11px] font-mono text-emerald-700 break-all">{editRulePreview.expression}</p>
-                  )}
+                 
                   {editRulePreview.error ? (
                     <p className="text-xs font-bold text-rose-600">{editRulePreview.error}</p>
                   ) : (
