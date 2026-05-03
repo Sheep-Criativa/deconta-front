@@ -106,6 +106,17 @@ export function CreateAccountDialog({
 
   const accountType = form.watch("type");
 
+  useEffect(() => {
+    if (isEditing) return;
+
+    if (accountType === AccountType.CREDIT_CARD) {
+      form.setValue("initialBalance", 0, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [accountType, form, isEditing]);
+
   async function onSubmit(values: FormValues) {
     if (!user) return;
     setLoading(true);
@@ -137,8 +148,8 @@ export function CreateAccountDialog({
           userId:         user.id,
           name:           values.name,
           type:           values.type,
-          initialBalance: values.initialBalance,
-          currentBalance: values.initialBalance,
+          initialBalance: values.type === AccountType.CREDIT_CARD ? 0 : values.initialBalance,
+          currentBalance: values.type === AccountType.CREDIT_CARD ? 0 : values.initialBalance,
           currencyCode:   values.currencyCode,
           isActive:       true,
         };
