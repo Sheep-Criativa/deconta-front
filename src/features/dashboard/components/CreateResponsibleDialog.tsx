@@ -170,25 +170,26 @@ export function CreateResponsibleDialog({
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 border-zinc-200">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base font-semibold text-zinc-800">Ativo</FormLabel>
-                   
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            {responsibleToEdit && (
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 border-zinc-200">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-semibold text-zinc-800">Ativo</FormLabel>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-emerald-500"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex justify-end pt-6">
               <Button 

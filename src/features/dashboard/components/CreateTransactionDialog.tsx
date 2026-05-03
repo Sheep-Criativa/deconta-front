@@ -47,7 +47,6 @@ import {
   buildRecurrenceRule,
   getRecurrencePreviewDates,
   recurrenceRuleSummary,
-  toRRuleExpression,
   type RecurrenceEndMode,
   type RecurrenceFrequency,
   type RecurrenceRuleFormModel,
@@ -58,11 +57,11 @@ import {
 import { decideTransactionSubmitMode } from "../utils/transactionSubmitDecision";
 import { toast } from "sonner";
 
-const formSchema = z.object({
+const baseSchema = z.object({
   accountId: z.preprocess((val) => {
     const num = Number(val);
     return isNaN(num) ? 0 : num;
-  }, z.number().min(1, "Selecione uma conta")),
+  }, z.number().min(0)),
   categoryId: z.coerce.number().min(0).optional(), // 0 = Sem categoria
   responsibleId: z.coerce.number().min(0).optional(), // 0 = Sem responsável
   description: z.string().max(250).optional(),
@@ -83,6 +82,16 @@ const formSchema = z.object({
   recurrenceCount: z.coerce.number().int().min(1).max(999).optional(),
   recurrenceByweekday: z.array(z.string()).default([]),
   recurrenceBymonthday: z.coerce.number().int().min(1).max(31).optional(),
+});
+
+const formSchema = baseSchema.superRefine((data, ctx) => {
+  if (data.status !== "PENDING" && data.accountId === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Selecione uma conta",
+      path: ["accountId"],
+    });
+  }
 });
 
 interface CreateTransactionDialogProps {
@@ -128,7 +137,7 @@ export function CreateTransactionDialog({
       paymentDate: format(new Date(), "yyyy-MM-dd"),
       categoryId: 0,
       responsibleId: 0,
-      amount: 0,
+      amount: "" as any,
       installmentTotal: 1,
       description: "",
       notes: "",
@@ -196,15 +205,6 @@ export function CreateTransactionDialog({
       return "";
     }
   }, [isRecurring, isEditMode, recurrenceModel]);
-
-  const recurrenceRuleExpression = useMemo(() => {
-    if (!recurrenceRule) return "";
-    try {
-      return toRRuleExpression(recurrenceRule);
-    } catch {
-      return "";
-    }
-  }, [recurrenceRule]);
 
   const recurrencePreviewDates = useMemo(() => {
     if (!recurrenceRule) return [];
@@ -274,7 +274,7 @@ export function CreateTransactionDialog({
     if (open) {
       if (transaction) {
         form.reset({
-          accountId: transaction.accountId,
+          accountId: transaction.accountId ?? 0,
           categoryId: transaction.categoryId ?? 0,
           responsibleId: transaction.responsibleId ?? 0,
           type: transaction.type.trim() as TransactionType,
@@ -304,7 +304,7 @@ export function CreateTransactionDialog({
           paymentDate: baseDate,
           categoryId: 0,
           responsibleId: 0,
-          amount: 0,
+          amount: "" as any,
           installmentTotal: 1,
           description: "",
           notes: "",
@@ -351,12 +351,13 @@ export function CreateTransactionDialog({
             resolvedCategoryId = createdCat.id;
             setCategories(prev => [...prev, createdCat]);
           } catch (createErr) {
-            // Se o backend retornar erro pois já existe (causando até crash de headers sent)
-            // refazemos o fetch das categorias para ver se o registro apareceu.
+            // Se o backend bloquear o nome duplicado, reaproveitamos a Geral já existente.
             const { getCategories } = await import("../services/category.service");
             const freshCats = await getCategories(user.id);
             setCategories(freshCats);
-            const foundCat = freshCats.find(c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType);
+            const foundCat = freshCats.find(
+              c => c.name.trim().toLowerCase() === "geral" && c.type.trim() === catType
+            );
             if (foundCat) {
               resolvedCategoryId = foundCat.id;
             } else {
@@ -419,6 +420,7 @@ export function CreateTransactionDialog({
       if (submitMode === "UPDATE_TRANSACTION" && transaction) {
         await updateTransaction(transaction.id, {
           userId: user.id,
+          accountId: values.accountId,
           categoryId: resolvedCategoryId,
           responsibleId: resolvedRespId,
           description: values.description || undefined,
@@ -483,7 +485,7 @@ export function CreateTransactionDialog({
       } else {
         await createTransaction({
           userId: user.id,
-          accountId: values.accountId,
+          accountId: values.accountId === 0 ? null : values.accountId,
           categoryId: resolvedCategoryId!,
           responsibleId: resolvedRespId!,
           description: values.description || undefined,
@@ -636,6 +638,13 @@ export function CreateTransactionDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-white rounded-xl shadow-lg border-zinc-100 max-h-60 overflow-y-auto w-full">
+                          {/* Sem conta option */}
+                          <SelectItem value="0" className="font-medium text-zinc-400 min-w-0">
+                            <span className="flex items-center gap-2 truncate pr-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 inline-block shrink-0" />
+                              <span className="truncate">Sem conta vinculada</span>
+                            </span>
+                          </SelectItem>
                           {accounts.map(acc => (
                             <SelectItem key={acc.id} value={String(acc.id)} className="font-medium min-w-0">
                               <span className="flex items-center gap-2 truncate pr-2">
@@ -805,7 +814,7 @@ export function CreateTransactionDialog({
               )}
             </div>
 
-            {!isEditMode && (
+            {!isEditMode && !isCreditCard && (
               <FormField
                 control={form.control}
                 name="recurring"
@@ -832,7 +841,7 @@ export function CreateTransactionDialog({
               />
             )}
 
-            {!isEditMode && isRecurring && (
+            {!isEditMode && !isCreditCard && isRecurring && (
               <div className="bg-zinc-50/70 p-4 rounded-2xl border border-zinc-100 space-y-4">
                 <div className="flex items-center gap-2">
                   <CalendarDays size={16} className="text-zinc-500" />
@@ -1032,9 +1041,7 @@ export function CreateTransactionDialog({
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 space-y-2">
                   <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Preview</p>
                   <p className="text-sm font-semibold text-emerald-800">{recurrenceSummaryText || "Regra inválida"}</p>
-                  {recurrenceRuleExpression && (
-                    <p className="text-[11px] font-mono text-emerald-700 break-all">{recurrenceRuleExpression}</p>
-                  )}
+                  
                   {recurrencePreviewDates.length > 0 && (
                     <div className="text-xs text-emerald-800 font-medium space-y-1">
                       {recurrencePreviewDates.map((date, index) => (

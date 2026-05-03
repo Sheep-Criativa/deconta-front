@@ -6,7 +6,7 @@ export type TransactionStatus = "PENDING" | "CONFIRMED" | "RECONCILED";
 export interface Transaction {
   id: number;
   userId: number;
-  accountId: number;
+  accountId: number | null;
   categoryId: number | null;
   responsibleId: number | null;
   description: string | null;
@@ -27,7 +27,7 @@ export interface Transaction {
 
 export interface CreateTransactionDTO {
   userId: number;
-  accountId: number;
+  accountId?: number | null;
   categoryId: number;
   responsibleId: number;
   description?: string;
@@ -46,6 +46,7 @@ export interface CreateTransactionDTO {
 
 export interface UpdateTransactionDTO {
   userId: number;
+  accountId?: number | null;
   categoryId?: number;
   responsibleId?: number;
   description?: string;

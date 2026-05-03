@@ -115,8 +115,8 @@ export default function Help() {
               Entre em contato diretamente com nossa equipe de suporte através do email:
             </p>
             <div className="bg-zinc-50 rounded-xl p-3 text-center border border-zinc-100">
-              <a href="mailto:suporte@deconta.com.br" className="text-sm font-bold text-emerald-600 hover:underline">
-                suporte@deconta.com.br
+              <a href="mailto:deconta.noreply@gmail.com" className="text-sm font-bold text-emerald-600 hover:underline">
+                deconta.noreply@gmail.com
               </a>
             </div>
           </BaseCard>

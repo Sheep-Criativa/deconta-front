@@ -69,11 +69,11 @@ export function CreateAccountDialog({
     defaultValues: {
       name:           "",
       type:           defaultType ?? AccountType.CHECKING,
-      initialBalance: 0,
+      initialBalance: "" as any,
       currencyCode:   "BRL",
       closingDay:     "",
       dueDay:         "",
-      limitAmount:    0,
+      limitAmount: "" as any,
     },
   });
 
@@ -95,16 +95,27 @@ export function CreateAccountDialog({
       form.reset({
         name:           "",
         type:           defaultType ?? AccountType.CHECKING,
-        initialBalance: 0,
+        initialBalance: "" as any,
         currencyCode:   "BRL",
         closingDay:     "",
         dueDay:         "",
-        limitAmount:    0,
+        limitAmount: "" as any,
       });
     }
   }, [open, editingAccount, defaultType]);
 
   const accountType = form.watch("type");
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    if (accountType === AccountType.CREDIT_CARD) {
+      form.setValue("initialBalance", 0, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [accountType, form, isEditing]);
 
   async function onSubmit(values: FormValues) {
     if (!user) return;
@@ -112,22 +123,20 @@ export function CreateAccountDialog({
 
     try {
       if (isEditing && editingAccount) {
-        // ── EDIT MODE: only send fields that can be safely edited ──
+        // ── EDIT MODE: backend expects the full account payload ──
         const payload: any = {
-          userId:         user.id,
-          name:           values.name,
-          type:           values.type,
-          currencyCode:   values.currencyCode,
-          isActive:       editingAccount.isActive,
+          userId: Number(user.id),
+          name: String(values.name),
+          type: values.type,
+          currencyCode: String(values.currencyCode).trim(),
+          isActive: editingAccount.isActive,
           initialBalance: Number(editingAccount.initialBalance),
-          currentBalance: Number(editingAccount.currentBalance), // backend requirement
+          currentBalance: Number(editingAccount.currentBalance),
+          closingDay: values.closingDay ? String(values.closingDay) : null,
+          dueDay: values.dueDay ? String(values.dueDay) : null,
+          limitAmount:
+            values.limitAmount == null ? null : Number(values.limitAmount),
         };
-
-        if (values.type === AccountType.CREDIT_CARD) {
-          payload.closingDay  = values.closingDay ? values.closingDay.toString() : null;
-          payload.limitAmount = values.limitAmount ?? null;
-          payload.dueDay      = values.dueDay ? values.dueDay.toString() : null;
-        }
 
         await updateAccount(editingAccount.id, payload);
         toast.success("Conta atualizada!");
@@ -137,8 +146,8 @@ export function CreateAccountDialog({
           userId:         user.id,
           name:           values.name,
           type:           values.type,
-          initialBalance: values.initialBalance,
-          currentBalance: values.initialBalance,
+          initialBalance: values.type === AccountType.CREDIT_CARD ? 0 : values.initialBalance,
+          currentBalance: values.type === AccountType.CREDIT_CARD ? 0 : values.initialBalance,
           currencyCode:   values.currencyCode,
           isActive:       true,
         };

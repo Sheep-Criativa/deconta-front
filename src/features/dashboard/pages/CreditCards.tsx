@@ -21,9 +21,12 @@ import { CreateAccountDialog } from "../components/CreateAccountDialog";
 import { CreateTransactionDialog } from "../components/CreateTransactionDialog";
 import { ICON_MAP } from "../components/CreateCategoryDialog";
 import { Button } from "@/components/ui/button";
+import { updateAccount } from "../services/account.service";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { deleteAccount } from "../services/account.service";
+import { toast } from "sonner";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -187,7 +190,7 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
         })()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-zinc-800 truncate">{label}</p>
+        <p className="text-[13px] sm:text-sm font-bold text-zinc-800 line-clamp-2 sm:line-clamp-1 leading-snug">{label}</p>
         <p className="text-[11px] text-zinc-400 font-medium capitalize">
           {format(parseISO(tx.date), "dd MMM yyyy", { locale: ptBR })}
         </p>
@@ -466,6 +469,7 @@ export default function CreditCards() {
   const navigate  = useNavigate();
 
   const [cards, setCards]               = useState<Account[]>([]);
+  const activeCards = cards.filter(c => c.isActive);
   const [selectedCardId, setSelectedCardId] = useState<number | "geral">("geral");
   const [allStmts, setAllStmts]         = useState<Record<number, Statement[]>>({});
   const [allTxs, setAllTxs]             = useState<Transaction[]>([]);   // all CC txs
@@ -476,35 +480,42 @@ export default function CreditCards() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isNewTxOpen, setIsNewTxOpen]   = useState(false);
+  const [editingCard, setEditingCard] = useState<Account | null>(null);
 
   const selectedCard = cards.find(c => c.id === selectedCardId);
 
   // ── Load all cards + meta ──
   const loadCards = async () => {
     if (!user) return;
+
     const [accounts, cats, resps, txs] = await Promise.all([
       getAccounts(user.id),
       getCategories(user.id),
       getResponsibles(user.id),
       getTransactions(user.id),
     ]);
-    const activeAccounts = accounts.filter(a => a.isActive);
-    const cc = activeAccounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
-    setCards(cc);
+
+    // fetched credit card accounts
+    const fetched = accounts.filter(a => a.type.trim() === AccountType.CREDIT_CARD);
+
+    // Merge: keep fetched first, then keep any local cards not returned by API (likely inactive)
+    const fetchedMap = new Map(fetched.map(c => [c.id, c]));
+    const preserved = cards.filter(c => !fetchedMap.has(c.id));
+    const merged = [...fetched, ...preserved];
+
+    setCards(merged);
     setCategories(cats);
     setResponsibles(resps);
 
-    // All CC transactions
-    const ccIds = new Set(cc.map(c => c.id));
-    setAllTxs(txs.filter(t => ccIds.has(t.accountId)));
+    // All CC transactions (only for merged card ids)
+    const mergedIds = new Set(merged.map(c => c.id));
+    setAllTxs(txs.filter(t => t.accountId != null && mergedIds.has(Number(t.accountId))));
 
-    // Statements for every card
-    if (cc.length > 0) {
-      const stmtResults = await Promise.all(cc.map(c => getStatements(c.id).catch(() => [] as Statement[])));
-      const map: Record<number, Statement[]> = {};
-      cc.forEach((c, i) => { map[c.id] = stmtResults[i]; });
-      setAllStmts(map);
-    }
+    // Statements: fetch for currently fetched cards, preserve statements we already had for preserved cards
+    const stmtResults = await Promise.all(fetched.map(c => getStatements(c.id).catch(() => [] as Statement[])));
+    const newStmtMap: Record<number, Statement[]> = { ...(allStmts || {}) };
+    fetched.forEach((c, i) => { newStmtMap[c.id] = stmtResults[i]; });
+    setAllStmts(newStmtMap);
   };
 
   useEffect(() => {
@@ -521,6 +532,58 @@ export default function CreditCards() {
     setCardTxs(allTxs.filter(t => t.accountId === selectedCardId));
     setLoadingDetail(false);
   }, [selectedCardId, allTxs]);
+
+  async function handleSoftDeactivate(cardId: number) {
+    if (!user) return;
+    try {
+      await deleteAccount(cardId, user.id);
+      // mark locally as inactive immediately for UI responsiveness
+      setCards(prev => prev.map(c => c.id === cardId ? { ...c, isActive: false } : c));
+      // refresh merged data from server (preserve local inactive ones)
+      await loadCards();
+      toast.success("Cartão desativado!");
+    } catch (error) {
+      console.error("Failed to deactivate credit card", error);
+      toast.error("Erro ao desativar cartão.");
+    }
+  }
+
+  async function handleActivate(card: Account) {
+    if (!user) return;
+
+    const toNumberOrZero = (value: unknown) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const toNumberOrNull = (value: unknown) => {
+      if (value === null || value === undefined || value === "") return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    try {
+      const payload = {
+        userId: Number(card.userId),
+        name: String(card.name),
+        type: card.type,
+        initialBalance: toNumberOrZero(card.initialBalance),
+        currentBalance: toNumberOrZero(card.currentBalance),
+        currencyCode: String(card.currencyCode).trim(),
+        closingDay: card.closingDay ? String(card.closingDay) : null,
+        dueDay: card.dueDay ? String(card.dueDay) : null,
+        limitAmount: toNumberOrNull(card.limitAmount),
+        isActive: true,
+      };
+
+      await updateAccount(card.id, payload as any);
+      await loadCards();
+      toast.success("Cartão ativado!");
+    } catch (error) {
+      console.error("Failed to activate credit card", error);
+      toast.error("Erro ao ativar cartão.");
+    }
+  }
 
   if (loading) {
     return (
@@ -572,7 +635,7 @@ export default function CreditCards() {
           active={selectedCardId === "geral"}
           onClick={() => setSelectedCardId("geral")}
         />
-        {cards.map(card => (
+        {activeCards.map(card => (
           <CardTab
             key={card.id}
             label={card.name}
@@ -583,20 +646,44 @@ export default function CreditCards() {
         ))}
       </div>
 
-      {/* ── No cards empty state ── */}
-      {cards.length === 0 ? (
-        <div className="bg-white border-2 border-dashed border-zinc-100 rounded-3xl p-14 text-center">
-          <CardIcon size={44} className="mx-auto text-zinc-200 mb-4" />
-          <h3 className="text-lg font-bold text-zinc-900">Nenhum cartão cadastrado</h3>
-          <p className="text-zinc-400 text-sm mt-1">Clique em "Novo Cartão" para começar.</p>
-        </div>
-
+      {/* ── No cards / Overview / Details ── */}
+      {activeCards.length === 0 ? (
+        // No active cards
+        (cards.length === 0) ? (
+          <div className="bg-white border-2 border-dashed border-zinc-100 rounded-3xl p-14 text-center">
+            <CardIcon size={44} className="mx-auto text-zinc-200 mb-4" />
+            <h3 className="text-lg font-bold text-zinc-900">Nenhum cartão cadastrado</h3>
+            <p className="text-zinc-400 text-sm mt-1">Clique em "Novo Cartão" para começar.</p>
+          </div>
+        ) : (
+          // There are cards but none active — show inactive cards with activation option
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-6 border border-zinc-100">
+              <h3 className="text-lg font-black text-zinc-900 mb-2">Nenhum cartão ativo</h3>
+              <p className="text-sm text-zinc-500 mb-4">Você tem cartões desativados. Ative-os para começar a usá-los novamente.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {cards.filter(c => !c.isActive).map(card => (
+                  <div key={card.id} className="bg-zinc-50 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900">{card.name}</p>
+                      <p className="text-xs text-zinc-400">Limite: R$ {Number(card.limitAmount ?? 0).toLocaleString("pt-BR")}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setEditingCard(card)}>Editar</Button>
+                      <Button size="sm" onClick={() => handleActivate(card)} className="bg-emerald-600 text-white hover:bg-emerald-700">Ativar</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
       ) : selectedCardId === "geral" ? (
         /* ── GERAL OVERVIEW ── */
         <OverviewPanel
-          cards={cards}
+          cards={activeCards}
           allStmts={allStmts}
-          allTxs={allTxs}
+          allTxs={allTxs.filter(t => t.accountId != null && activeCards.some(c => c.id === t.accountId))}
           responsibles={responsibles}
           categories={categories}
           navigate={navigate}
@@ -609,11 +696,39 @@ export default function CreditCards() {
           {/* LEFT: Card visual + txs */}
           <div className="lg:col-span-4 space-y-6">
             {selectedCard && (
-              <CardVisual
-                name={selectedCard.name}
-                limit={totalLimit}
-                used={usedAmount}
-              />
+              <div className="space-y-3">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl h-10 px-4 font-bold border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+                    onClick={() => setEditingCard(selectedCard)}
+                  >
+                    Editar cartão
+                  </Button>
+                      {selectedCard.isActive ? (
+                        <Button
+                          variant="outline"
+                          className="rounded-xl h-10 px-4 font-bold border-rose-200 text-rose-600 hover:bg-rose-50"
+                          onClick={() => handleSoftDeactivate(selectedCard.id)}
+                        >
+                          Excluir
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="rounded-xl h-10 px-4 font-bold border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                          onClick={() => handleActivate(selectedCard)}
+                        >
+                          Ativar
+                        </Button>
+                      )}
+                </div>
+                <CardVisual
+                  name={selectedCard.name}
+                  limit={totalLimit}
+                  used={usedAmount}
+                />
+              </div>
             )}
 
             <div className="bg-white rounded-3xl p-6 border border-zinc-100">
@@ -725,6 +840,18 @@ export default function CreditCards() {
         onSuccess={async () => { await loadCards(); }}
       />
 
+      <CreateAccountDialog
+        open={!!editingCard}
+        editingAccount={editingCard}
+        onOpenChange={(open) => {
+          if (!open) setEditingCard(null);
+        }}
+        onSuccess={async () => {
+          setEditingCard(null);
+          await loadCards();
+        }}
+      />
+
       <CreateTransactionDialog
         open={isNewTxOpen}
         onOpenChange={setIsNewTxOpen}
@@ -737,6 +864,8 @@ export default function CreditCards() {
         )}
         onSuccess={async () => { await loadCards(); }}
       />
+
+      {/* Deletion now performs immediate soft-deactivate; no confirmation dialog */}
     </div>
   );
 }

@@ -27,7 +27,13 @@ type ProfileValues = z.infer<typeof profileSchema>;
 // ── Password form schema ─────────────────────────────────────────────────────
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Informe a senha atual"),
-  newPassword:     z.string().min(6, "A nova senha deve ter ao menos 6 caracteres"),
+  newPassword:     z.string()
+    .min(6, "A nova senha deve ter ao menos 6 caracteres")
+    .max(100)
+    .regex(/[A-Z]/, "Senha deve conter ao menos uma letra maiúscula")
+    .regex(/[a-z]/, "Senha deve conter ao menos uma letra minúscula")
+    .regex(/[0-9]/, "Senha deve conter ao menos um número")
+    .regex(/[^A-Za-z0-9]/, "Senha deve conter ao menos um caractere especial"),
   confirmPassword: z.string(),
 }).refine(d => d.newPassword === d.confirmPassword, {
   message: "As senhas não coincidem",
@@ -74,15 +80,9 @@ export default function Profile() {
     if (!user) return;
     setSavingProfile(true);
     try {
-      // Backend requires passwordHash even for profile updates — send empty string
-      // so the current password is preserved via bcrypt re-hash on server side.
-      // The backend will hash whatever we send, so we keep sending a sentinel that
-      // doesn't change the password (backend must handle empty string gracefully).
-      // ⚠️ If your backend rejects empty passwordHash, ask the user for their current one.
       await updateUser(user.id, {
         name:         values.name,
         email:        values.email,
-        passwordHash: "__KEEP__", // sentinel — remove if backend ignores empty passwords
       });
       await refreshUser();
       toast.success("Perfil atualizado!");
@@ -164,7 +164,8 @@ export default function Profile() {
                     <Input
                       {...field}
                       placeholder="Seu nome completo"
-                      className="h-12 rounded-xl border-zinc-200 bg-zinc-50 font-medium focus-visible:ring-emerald-500"
+                      disabled={user?.hasPassword === false}
+                      className="h-12 rounded-xl border-zinc-200 bg-zinc-50 font-medium focus-visible:ring-emerald-500 disabled:opacity-50"
                     />
                   </FormControl>
                   <FormMessage />
@@ -182,7 +183,8 @@ export default function Profile() {
                       {...field}
                       type="email"
                       placeholder="seu@email.com"
-                      className="h-12 rounded-xl border-zinc-200 bg-zinc-50 font-medium focus-visible:ring-emerald-500"
+                      disabled={user?.hasPassword === false}
+                      className="h-12 rounded-xl border-zinc-200 bg-zinc-50 font-medium focus-visible:ring-emerald-500 disabled:opacity-50"
                     />
                   </FormControl>
                   <FormMessage />
@@ -191,8 +193,8 @@ export default function Profile() {
             />
             <Button
               type="submit"
-              disabled={savingProfile}
-              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98]"
+              disabled={savingProfile || user?.hasPassword === false}
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {savingProfile
                 ? <><Loader2 size={16} className="mr-2 animate-spin" /> Salvando...</>
@@ -204,6 +206,7 @@ export default function Profile() {
       </SectionCard>
 
       {/* ─── Change Password ─── */}
+      {user?.hasPassword !== false && (
       <SectionCard title="Alterar Senha" icon={Lock}>
         <Form {...passwordForm}>
           <form onSubmit={passwordForm.handleSubmit(onSavePassword)} className="space-y-5">
@@ -274,6 +277,7 @@ export default function Profile() {
           </form>
         </Form>
       </SectionCard>
+      )}
 
     </div>
   );

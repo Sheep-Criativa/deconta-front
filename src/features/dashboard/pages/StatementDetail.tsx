@@ -59,9 +59,9 @@ function TxRow({ tx, categories }: { tx: Transaction; categories: Category[] }) 
         })()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-zinc-800 truncate">{label}</p>
+        <p className="text-[13px] sm:text-sm font-bold text-zinc-800 line-clamp-2 sm:line-clamp-1 leading-snug">{label}</p>
         {category && (
-          <p className="text-[11px] text-zinc-400 font-medium">{category.name}</p>
+          <p className="text-[10px] sm:text-[11px] text-zinc-400 font-medium line-clamp-1">{category.name}</p>
         )}
       </div>
       <div className="text-right flex-shrink-0">

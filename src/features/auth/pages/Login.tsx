@@ -49,7 +49,7 @@ export default function Login() {
     setFormError(null);
 
     const formData = new FormData(event.currentTarget);
-    const email = formData.get("email") as string;
+    const email = (formData.get("email") as string).toLowerCase();
     const passwordHash = formData.get("passwordHash") as string;
 
     if (!email || !passwordHash) {

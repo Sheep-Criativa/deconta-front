@@ -26,6 +26,7 @@ export interface User {
   name: string;
   email: string;
   firstAccess: boolean;
+  hasPassword?: boolean;
 }
 
 export async function getMe(): Promise<User> {
@@ -37,7 +38,7 @@ export async function logoutUser() {
   await api.post('/auth/logout');
 }
 
-export async function updateUser(id: number, data: { name: string; email: string; passwordHash: string }) {
+export async function updateUser(id: number, data: { name?: string; email?: string; passwordHash?: string }) {
   const response = await api.put(`/users/${id}`, data);
   return response.data as User;
 }

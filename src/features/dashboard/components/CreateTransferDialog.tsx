@@ -15,7 +15,10 @@ import { toast } from "sonner";
 import { getCategories } from "../services/category.service";
 
 const formSchema = z.object({
-  destinationAccountId: z.coerce.number().min(1, "Selecione uma conta de destino"),
+  destinationAccountId: z.string({
+    required_error: "Selecione uma conta de destino",
+    invalid_type_error: "Selecione uma conta de destino"
+  }).min(1, "Selecione uma conta de destino"),
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
   date: z.string().min(1, "Selecione uma data"),
 });
@@ -41,8 +44,8 @@ export function CreateTransferDialog({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
-      destinationAccountId: undefined,
-      amount: 0,
+      destinationAccountId: "",
+      amount: "" as any,
       date: new Date().toISOString().split("T")[0],
     },
   });
@@ -68,7 +71,8 @@ export function CreateTransferDialog({
                      || cats.find(c => c.name.toLowerCase() === "geral" && c.type.trim() === "INCOME")
                      || cats.find(c => c.type.trim() === "INCOME");
 
-      const destAccount = destinationAccounts.find(a => a.id === values.destinationAccountId);
+      const destAccountId = Number(values.destinationAccountId);
+      const destAccount = destinationAccounts.find(a => a.id === destAccountId);
 
       const baseDate = new Date(values.date + "T12:00:00");
 
@@ -89,7 +93,7 @@ export function CreateTransferDialog({
       // 2. Deposit into Destination (INCOME)
       await createTransaction({
         userId: user.id,
-        accountId: values.destinationAccountId,
+        accountId: destAccountId,
         categoryId: incomeCat ? incomeCat.id : 0,
         responsibleId: 0,
         description: `Transferência recebida de ${originAccount.name}`,

@@ -73,7 +73,7 @@ export function ViewTransactionDialog({
             <span className={`text-4xl font-black tabular-nums tracking-tighter ${isExpense ? "text-rose-600" : "text-emerald-600"}`}>
                {isExpense ? "-" : "+"} R$ {Number(transaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-base font-bold text-zinc-800 mt-2 line-clamp-2 px-4 shadow-sm border border-zinc-200 bg-white rounded-lg py-1">
+            <span className="text-sm sm:text-base font-bold text-zinc-800 mt-2 line-clamp-2 px-4 shadow-sm border border-zinc-200 bg-white rounded-lg py-1 w-full max-w-full leading-snug break-words">
                {transaction.description || (isExpense ? "Despesa" : "Receita")}
             </span>
           </div>
@@ -122,7 +122,7 @@ export function ViewTransactionDialog({
 
           <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-xl flex flex-col gap-1">
              <span className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-1"><AlignLeft size={10} /> Observações / Comentários</span>
-             <p className="text-sm font-medium text-zinc-600 mt-1 whitespace-pre-wrap">
+             <p className="text-sm font-medium text-zinc-600 mt-1 whitespace-pre-wrap break-words max-h-28 overflow-y-auto pr-1">
                {transaction.notes || "Nenhum comentário anotado."}
              </p>
           </div>

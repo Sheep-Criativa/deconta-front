@@ -87,29 +87,39 @@ export default function HeroSection() {
           </motion.div>
 
           <div className="flex flex-wrap justify-center items-center">
-            <motion.span
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              Dê con
-            </motion.span>
-            
-            <motion.span 
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4, type: "spring", bounce: 0.4 }}
-              className="inline-block relative text-zinc-900"
-            >
-              t
-            </motion.span>
+            <span className="whitespace-nowrap flex items-center">
+              <motion.span
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                Dê con
+              </motion.span>
+              
+              <motion.span 
+                initial={{ y: 60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.4, type: "spring", bounce: 0.4 }}
+                className="inline-block relative text-zinc-900"
+              >
+                t
+              </motion.span>
+
+              <motion.span
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                a&nbsp;
+              </motion.span>
+            </span>
 
             <motion.span
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              a do seu dinheiro&nbsp;
+              do seu dinheiro&nbsp;
             </motion.span>
           </div>
           

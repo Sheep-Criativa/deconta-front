@@ -112,7 +112,7 @@ function TransactionRow({
 
       {/* Description + account + resp */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-zinc-900 truncate">
+        <p className="text-[13px] sm:text-sm font-bold text-zinc-900 line-clamp-2 sm:line-clamp-1 leading-snug">
           {tx.description || category?.name || cfg.label}
           {tx.installmentTotal && tx.installmentTotal > 1 && (
             <span className="ml-2 text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
@@ -121,12 +121,17 @@ function TransactionRow({
           )}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {account && (
+          {account ? (
             <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
               {isCreditCard
                 ? <CreditCard size={10} className="text-zinc-300" />
                 : <Landmark size={10} className="text-zinc-300" />}
               {account.name}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded-md">
+              <Landmark size={10} />
+              Sem conta vinculada
             </span>
           )}
           {resp && (
@@ -166,7 +171,7 @@ function TransactionRow({
       {/* Actions menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
+          <button className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all flex-shrink-0">
             <MoreVertical size={15} />
           </button>
         </DropdownMenuTrigger>
@@ -180,6 +185,11 @@ function TransactionRow({
           {(isExpense && tx.status.trim() === "PENDING" && new Date(tx.date) > new Date()) && (
             <DropdownMenuItem
               onClick={async () => {
+                if (!tx.accountId || tx.accountId === 0) {
+                  toast.error("Para pagar, defina a conta vinculada.");
+                  onEdit(tx);
+                  return;
+                }
                 const newDesc = tx.description ? `${tx.description} - (Antecipado)` : "Pagamento (Antecipado)";
                 try {
                   const { updateTransaction } = await import("../services/transaction.service");
@@ -598,7 +608,7 @@ export default function Transactions() {
         <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-black text-rose-700">Excluir transação?</p>
-            <p className="text-xs text-rose-500 font-medium mt-0.5">
+            <p className="text-[11px] sm:text-xs text-rose-500 font-medium mt-0.5 line-clamp-2 sm:line-clamp-1 leading-snug">
               {deletingTx.description || "Sem descrição"} · R$ {Number(deletingTx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </div>

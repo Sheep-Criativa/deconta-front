@@ -202,10 +202,10 @@ function RecentTxRow({
         })()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-zinc-800 truncate">
+        <p className="text-[13px] sm:text-sm font-semibold text-zinc-800 line-clamp-2 sm:line-clamp-1 leading-snug">
           {tx.description || cat?.name || (isExpense ? "Despesa" : "Receita")}
         </p>
-        <p className="text-[10px] text-zinc-400 font-medium">{acc?.name} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>
+        <p className="text-[10px] text-zinc-400 font-medium">{acc ? acc.name : <span className="text-rose-500 font-bold">Sem conta</span>} · {format(parseISO(tx.date), "dd MMM", { locale: ptBR })}</p>
       </div>
       <span className={`text-sm font-semibold flex-shrink-0 ${isExpense ? "text-zinc-800" : "text-emerald-600"}`}>
         {isExpense ? "-" : "+"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -299,13 +299,9 @@ function DashboardCalendar({
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-<<<<<<< HEAD
-
-=======
   const monthStartKey = format(monthStart, "yyyy-MM-dd");
   const monthEndKey = format(monthEnd, "yyyy-MM-dd");
   
->>>>>>> 2daa7150003cadccb7a2e14dcdfe2cbd2d088c47
   // Calendário sempre começa na segunda-feira
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
@@ -395,16 +391,10 @@ function DashboardCalendar({
           <div className="grid grid-cols-7 border-t border-l border-zinc-100 bg-white rounded-xl overflow-hidden flex-1">
             {days.map(day => {
               const isCur = isSameMonth(day, monthStart);
-<<<<<<< HEAD
-              const dayTxs = transactions.filter(t => isSameDay(parseISO(t.date), day));
-              const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s, t) => s + Number(t.amount), 0);
-              const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
-=======
               const dayKey = format(day, "yyyy-MM-dd");
               const dayTxs = calendarTransactions.filter((t) => t.date.slice(0, 10) === dayKey);
               const incomes = dayTxs.filter(t => t.type.trim() === "INCOME").reduce((s,t) => s + Number(t.amount), 0);
               const expenses = dayTxs.filter(t => t.type.trim() === "EXPENSE").reduce((s,t) => s + Number(t.amount), 0);
->>>>>>> 2daa7150003cadccb7a2e14dcdfe2cbd2d088c47
 
               return (
                 <div
@@ -430,16 +420,10 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-<<<<<<< HEAD
-  const [statements, setStatements] = useState<Statement[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
-  const [loading, setLoading] = useState(true);
-=======
   const [recurrences,  setRecurrences]  = useState<Recurrence[]>([]);
   const [statements,   setStatements]   = useState<Statement[]>([]);
   const [categories,   setCategories]   = useState<{ id: number; name: string; icon?: string | null; color?: string | null }[]>([]);
   const [loading,      setLoading]      = useState(true);
->>>>>>> 2daa7150003cadccb7a2e14dcdfe2cbd2d088c47
 
   const [isTxDialogOp, setIsTxDialogOpen] = useState(false);
   const [txDialogType, setTxDialogType] = useState<TransactionType>("EXPENSE");
@@ -686,8 +670,6 @@ export default function DashboardHome() {
                   </div>
                 ))}
               </div>
-<<<<<<< HEAD
-=======
             )}
           </BaseCard>
 
@@ -707,7 +689,6 @@ export default function DashboardHome() {
               <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
                 Ver todas →
               </a>
->>>>>>> 2daa7150003cadccb7a2e14dcdfe2cbd2d088c47
             </div>
           )}
         </BaseCard>

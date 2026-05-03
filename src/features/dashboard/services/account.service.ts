@@ -7,7 +7,7 @@ export const AccountType = {
   INVESTMENT: "INVESTMENT",
 } as const;
 
-export type AccountType = typeof AccountType[keyof typeof AccountType];
+export type AccountType = (typeof AccountType)[keyof typeof AccountType];
 
 export interface Account {
   id: number;
@@ -33,7 +33,7 @@ export interface CreateAccountDTO {
   currentBalance: number;
   currencyCode: string;
   closingDay?: string | null;
-  dueDay?: Date | null;
+  dueDay?: string | null;
   limitAmount?: number | null;
   isActive?: boolean;
 }
@@ -50,7 +50,10 @@ export async function createAccount(data: CreateAccountDTO): Promise<Account> {
   return response.data;
 }
 
-export async function updateAccount(id: number, data: UpdateAccountDTO): Promise<Account> {
+export async function updateAccount(
+  id: number,
+  data: UpdateAccountDTO,
+): Promise<Account> {
   const response = await api.put(`/accounts/${id}`, data);
   return response.data;
 }

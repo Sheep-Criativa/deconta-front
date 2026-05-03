@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { CreateRecurrenceDialog } from "../components/CreateRecurrenceDialog";
 import {
   Select,
   SelectContent,
@@ -137,6 +138,7 @@ export default function RecurrencesPage() {
   const [visibleCount, setVisibleCount] = useState(12);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<EditRecurrenceState | null>(null);
 
   async function loadAll() {
@@ -391,6 +393,12 @@ export default function RecurrencesPage() {
             {recurrences.length} regra{recurrences.length !== 1 ? "s" : ""} cadastrada{recurrences.length !== 1 ? "s" : ""}
           </p>
         </div>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-lg"
+        >
+          + Nova Recorrencia
+        </Button>
       </div>
 
       <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm overflow-hidden">
@@ -469,7 +477,7 @@ export default function RecurrencesPage() {
                       </TableCell>
 
                       <TableCell className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:-translate-x-3 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300">
+                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-40 md:-translate-x-3 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300">
                           <button onClick={() => openEditDialog(recurrence)} className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors" title="Editar">
                             <Pencil size={15} />
                           </button>
@@ -716,13 +724,7 @@ export default function RecurrencesPage() {
                     <CalendarDays size={14} className="text-zinc-500" />
                     Regra de repeticao
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setEditing((prev) => prev ? { ...prev, advancedMode: !prev.advancedMode } : prev)}
-                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
-                  >
-                    {editing.advancedMode ? "Voltar para modo guiado" : "Editar RRULE avancada"}
-                  </button>
+                  
                 </div>
 
                 {editing.advancedMode ? (
@@ -926,9 +928,7 @@ export default function RecurrencesPage() {
                   <p className="text-sm font-semibold text-emerald-800">
                     {editRulePreview.summary || "Sem resumo"}
                   </p>
-                  {editRulePreview.expression && (
-                    <p className="text-[11px] font-mono text-emerald-700 break-all">{editRulePreview.expression}</p>
-                  )}
+                 
                   {editRulePreview.error ? (
                     <p className="text-xs font-bold text-rose-600">{editRulePreview.error}</p>
                   ) : (
@@ -965,6 +965,14 @@ export default function RecurrencesPage() {
         </DialogContent>
       </Dialog>
 
+      <CreateRecurrenceDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSuccess={() => {
+          loadAll();
+          setIsCreateOpen(false);
+        }}
+      />
     </div>
   );
 }
