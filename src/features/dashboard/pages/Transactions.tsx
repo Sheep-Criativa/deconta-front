@@ -434,8 +434,8 @@ export default function Transactions() {
       if (d < currentMonth || d > monthEnd) return false;
 
       // View tab filtering
-      if (viewTab === "contas"   && !bankAccountIds.has(tx.accountId))      return false;
-      if (viewTab === "cartoes"  && !creditCardAccountIds.has(tx.accountId)) return false;
+      if (viewTab === "contas"   && (tx.accountId == null || !bankAccountIds.has(tx.accountId)))      return false;
+      if (viewTab === "cartoes"  && (tx.accountId == null || !creditCardAccountIds.has(tx.accountId))) return false;
 
       // Additional filters
       if (filters.type      && tx.type.trim()  !== filters.type)                   return false;
@@ -488,7 +488,7 @@ export default function Transactions() {
       icon: Landmark,
       count: transactions.filter(tx => {
         const d = parseISO(tx.date);
-        return d >= currentMonth && d <= monthEnd && bankAccountIds.has(tx.accountId);
+        return d >= currentMonth && d <= monthEnd && tx.accountId != null && bankAccountIds.has(tx.accountId);
       }).length,
     },
     {
@@ -497,7 +497,7 @@ export default function Transactions() {
       icon: CreditCard,
       count: transactions.filter(tx => {
         const d = parseISO(tx.date);
-        return d >= currentMonth && d <= monthEnd && creditCardAccountIds.has(tx.accountId);
+        return d >= currentMonth && d <= monthEnd && tx.accountId != null && creditCardAccountIds.has(tx.accountId);
       }).length,
     },
   ];

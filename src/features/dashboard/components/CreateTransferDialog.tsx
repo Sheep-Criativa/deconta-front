@@ -15,10 +15,8 @@ import { toast } from "sonner";
 import { getCategories } from "../services/category.service";
 
 const formSchema = z.object({
-  destinationAccountId: z.string({
-    required_error: "Selecione uma conta de destino",
-    invalid_type_error: "Selecione uma conta de destino"
-  }).min(1, "Selecione uma conta de destino"),
+  destinationAccountId: z.string()
+    .min(1, "Selecione uma conta de destino"),
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
   date: z.string().min(1, "Selecione uma data"),
 });

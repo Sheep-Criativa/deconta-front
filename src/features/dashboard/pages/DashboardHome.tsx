@@ -670,32 +670,13 @@ export default function DashboardHome() {
                   </div>
                 ))}
               </div>
-            )}
-          </BaseCard>
-
-          {/* --- ROW 2 --- */}
-          {/* Dashboard Calendar Preview */}
-          <DashboardCalendar transactions={transactions} recurrences={recurrences} className="lg:col-span-8" />
-
-          {/* Recent Transactions */}
-          <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-white">
-                  <List size={14} />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900">Últimas Transações</h3>
-              </div>
-              <a href="/history" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
-                Ver todas →
-              </a>
             </div>
           )}
         </BaseCard>
 
         {/* --- ROW 2 --- */}
         {/* Dashboard Calendar Preview */}
-        <DashboardCalendar transactions={transactions} className="lg:col-span-8" />
+        <DashboardCalendar transactions={transactions} recurrences={recurrences} className="lg:col-span-8" />
 
         {/* Recent Transactions */}
         <BaseCard id="tour-dashboard-recent" className="rounded-3xl border border-zinc-100 shadow-none lg:col-span-4 flex flex-col h-full">

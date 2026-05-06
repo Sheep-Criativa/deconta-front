@@ -62,14 +62,14 @@ function normalizeText(value: string | null | undefined): string {
 }
 
 function txFingerprint(params: {
-  accountId: number;
+  accountId: number | null;
   type: string;
   amount: number;
   description: string | null | undefined;
   dayKey: string;
 }) {
   return [
-    params.accountId,
+    params.accountId ?? 0,
     params.type.trim().toUpperCase(),
     Number(params.amount).toFixed(2),
     normalizeText(params.description),
